@@ -1,0 +1,220 @@
+{% if properties.version == "6.2.3" %}
+  {% if properties.license == "byol" %}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-623-20191223-001-w-license" %}
+  {% endif %}
+  {% if properties.license == "payg" %}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-623-20191223-001-w-license" %}
+  {% endif %}
+{% endif %}
+
+resources:
+- name: {{ env["deployment"]}}-fgt1
+  type: compute.v1.instance
+  properties:
+    zone: {{ properties["zone1"]}}
+    machineType: zones/{{ properties["zone1"]}}/machineTypes/{{ properties["instanceType"]}}
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: {{ firmwareImage }}
+        diskSizeGb: 10.0
+    networkInterfaces:
+    - network: {{ properties["vpc"]}}
+      subnetwork: {{ properties["subnet"]}}
+      networkIP: 10.0.0.2
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    - network: {{ properties["haVpc"]}}
+      subnetwork: {{ properties["haSubnet"]}}
+      networkIP: 10.0.0.130
+    - network: {{ properties["mgmtVpc"]}}
+      subnetwork: {{ properties["mgmtSubnet"]}}
+      networkIP: 10.0.0.194  
+    canIpForward: Yes
+    serviceAccounts:
+    - email: {{ properties.serviceAccount }}
+      scopes:
+      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+      - 'https://www.googleapis.com/auth/logging.write'
+      - 'https://www.googleapis.com/auth/monitoring.write'
+      - 'https://www.googleapis.com/auth/compute'
+    metadata:
+      items:
+      - key: user-data
+        value: |
+          config system global
+            set hostname "{{ env.deployment }}-fgt1"
+          end
+          config router static
+            edit 1
+            set dst 10.0.0.129/32
+            set device port2
+            next
+            edit 2
+            set dst 10.0.0.128/26
+            set gateway 10.0.0.129
+            next
+            edit 3
+            set dst 10.0.0.193/32
+            set device port3
+            next
+            edit 4
+            set dst 10.0.0.192/26
+            set gateway 10.0.0.193
+            next
+          end
+          config system ha
+            set group-id 21
+            set group-name "cluster1"
+            set mode a-p
+            set hbdev "port2" 50
+            set session-pickup enable
+            set session-pickup-connectionless enable
+            set ha-mgmt-status enable
+            config ha-mgmt-interfaces
+              edit 1
+              set interface "port3"
+              set gateway 10.0.0.193
+              next
+            end
+            set override enable
+            set priority 200
+            set unicast-hb enable
+            set unicast-hb-peerip 10.0.0.131
+            set unicast-hb-netmask 255.255.255.0
+          end
+          config system sdn-connector
+            edit "gcp_conn"
+            set type gcp
+            set ha-status enable
+            config external-ip
+            edit "reserve-fgthapublic"
+            next
+          end
+          config route
+            edit "route-internal"
+            next
+          end
+          set use-metadata-iam enable
+          next
+          end
+    tags:
+      items:
+       - {{env["deployment"]}}-fgt
+- name: {{ env["deployment"]}}-fgt2
+  type: compute.v1.instance
+  properties:
+    zone: {{ properties["zone2"]}}
+    machineType: zones/{{ properties["zone2"]}}/machineTypes/{{ properties["instanceType"]}}
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: {{ firmwareImage }}
+        diskSizeGb: 10.0
+    networkInterfaces:
+    - network: {{ properties["vpc"]}}
+      subnetwork: {{ properties["subnet"]}}
+      networkIP: 10.0.0.3
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    - network: {{ properties["haVpc"]}}
+      subnetwork: {{ properties["haSubnet"]}}
+      networkIP: 10.0.0.131
+    - network: {{ properties["mgmtVpc"]}}
+      subnetwork: {{ properties["mgmtSubnet"]}}
+      networkIP: 10.0.0.195  
+    canIpForward: Yes
+    serviceAccounts:
+    - email: {{ properties.serviceAccount }}
+      scopes:
+      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+      - 'https://www.googleapis.com/auth/logging.write'
+      - 'https://www.googleapis.com/auth/monitoring.write'
+      - 'https://www.googleapis.com/auth/compute'
+    metadata:
+      items:
+      - key: user-data
+        value: |
+          config system global
+            set hostname "{{ env.deployment }}-fgt2"
+          end
+          config router static
+            edit 1
+            set dst 10.0.0.129/32
+            set device port2
+            next
+            edit 2
+            set dst 10.0.0.128/26
+            set gateway 10.0.0.129
+            next
+            edit 3
+            set dst 10.0.0.193/32
+            set device port3
+            next
+            edit 4
+            set dst 10.0.0.192/26
+            set gateway 10.0.0.193
+            next
+          end
+          config system ha
+          set group-id 21
+          set group-name "cluster1"
+          set mode a-p
+          set hbdev "port2" 50
+          set session-pickup enable
+          set session-pickup-connectionless enable
+          set ha-mgmt-status enable
+          config ha-mgmt-interfaces
+          edit 1
+          set interface "port3"
+          set gateway 10.0.0.193
+          next
+          end
+          set override enable
+          set priority 200
+          set unicast-hb enable
+          set unicast-hb-peerip 10.0.0.130
+          set unicast-hb-netmask 255.255.255.0
+          end
+    tags:
+      items:
+       - {{env["deployment"]}}-fgt
+- name: {{ env["deployment"]}}-fgt-allow-in
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.vpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{env["deployment"]}}-fgt
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+    - IPProtocol: ESP
+    - IPProtocol: AH
+- name: {{ env.deployment }}-fgt-route-direct
+  type: compute.v1.route
+  properties:
+    network: {{ properties.vpc }}
+    destRange: 0.0.0.0/0
+    nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
+    priority: 10
+    tags:
+    - {{env["deployment"]}}-fgt
+- name: {{ env.deployment }}-default-via-fgt
+  type: compute.v1.route
+  properties:
+    network: {{ properties.vpc }}
+    destRange: 0.0.0.0/0
+    nextHopIp: $(ref.{{ env["deployment"]}}-fgt1.networkInterfaces[0].networkIP)
+    priority: 100

@@ -1,0 +1,86 @@
+{% set hubVpcName = env.deployment ~ '-' ~ properties.hubNetwork.name %}
+{% set hubSubnetName = hubVpcName ~ '-subnet' %}
+
+resources:
+- name: {{ hubVpcName }}
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: no
+- name: {{ hubSubnetName }}
+  type: compute.v1.subnetwork
+  properties:
+    region: {{ properties.region }}
+    network: $(ref.{{ hubVpcName }}.selfLink)
+    ipCidrRange: {{ properties.hubNetwork.ipCidrRange }}
+- name: {{ env.deployment }}-{{ properties.haNetwork.name }}
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: no
+- name: {{ env.deployment }}-{{ properties.haNetwork.name }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    region: {{properties.region }}
+    network: $(ref.{{ env.deployment }}-{{ properties.haNetwork.name }}.selfLink)
+    ipCidrRange: {{properties.haNetwork.ipCidrRange}}
+- name: {{ env.deployment }}-{{ properties.mgmtNetwork.name }}
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: no
+- name: {{ env.deployment }}-{{ properties.mgmtNetwork.name }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    region: {{properties.region }}
+    network: $(ref.{{ env.deployment }}-{{ properties.mgmtNetwork.name }}.selfLink)
+    ipCidrRange: {{properties.mgmtNetwork.ipCidrRange}}
+{% for spoke in properties.spokeNetworks %}
+{% set spokeVpcName = env.deployment ~ '-' ~ spoke.name %}
+- name: {{ spokeVpcName }}
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: no
+- name: {{ spokeVpcName }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    region: {{properties["region"]}}
+    network: $(ref.{{ spokeVpcName }}.selfLink)
+    ipCidrRange: {{ spoke.ipCidrRange }}
+- name: {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+  type: gcp-types/compute-v1:compute.networks.addPeering
+  properties:
+    name: {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+    network: {{ spokeVpcName }}
+    peerNetwork: $(ref.{{ hubVpcName }}.selfLink)
+    autoCreateRoutes: true
+    exchangeSubnetRoutes: true
+    importCustomRoutes: true
+  metadata:
+    dependsOn:
+    - {{ hubVpcName }}
+    - {{ spokeVpcName }}
+- name: {{ env.deployment }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
+  type: gcp-types/compute-v1:compute.networks.addPeering
+  properties:
+    name: {{ env.deployment }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
+    network: {{ hubVpcName }}
+    peerNetwork: $(ref.{{ spokeVpcName }}.selfLink)
+    autoCreateRoutes: true
+    exchangeSubnetRoutes: true
+    exportCustomRoutes: true
+  metadata:
+    dependsOn:
+    - {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}  
+{% endfor %}
+
+outputs:
+- name: hubVpcRef
+  value: $(ref.{{ hubVpcName }}.selfLink)
+- name: hubSubnetRef
+  value: $(ref.{{ hubSubnetName }}.selfLink)
+- name: haVpcRef
+  value: $(ref.{{ env.deployment }}-{{ properties.haNetwork.name }}.selfLink)
+- name: haSubnetRef
+  value: $(ref.{{ env.deployment }}-{{ properties.haNetwork.name }}-subnet.selfLink)
+- name: mgmtVpcRef
+  value: $(ref.{{ env.deployment }}-{{ properties.mgmtNetwork.name }}.selfLink)
+- name: mgmtSubnetRef
+  value: $(ref.{{ env.deployment }}-{{ properties.mgmtNetwork.name }}-subnet.selfLink)

@@ -1,0 +1,30 @@
+imports:
+- path: vpc.jinja
+- path: singlevm.jinja
+- path: peerings.jinja
+
+resources:
+- name: HubVPC
+  type: vpc.jinja
+  properties:
+    region: {{ properties["region"]}}
+    hubNetwork: {{ properties["hubNetwork"]}}
+    haNetwork: {{ properties["haNetwork"]}}
+    mgmtNetwork: {{ properties["mgmtNetwork"]}}
+    spokeNetworks: {{ properties["spokeNetworks"]}}
+- name: Fortigate
+  type: singlevm.jinja
+  properties:
+    zone1: {{ properties["zone1"]}}
+    zone2: {{ properties["zone2"]}}
+    instanceType: {{ properties["fgtInstanceType"]}}
+    vpc: $(ref.HubVPC.hubVpcRef)
+    subnet: $(ref.HubVPC.hubSubnetRef)
+    haVpc: $(ref.HubVPC.haVpcRef)
+    haSubnet: $(ref.HubVPC.haSubnetRef)
+    mgmtVpc: $(ref.HubVPC.mgmtVpcRef)
+    mgmtSubnet: $(ref.HubVPC.mgmtSubnetRef)
+    serviceAccount: {{ properties.fgtServiceAccount }}
+    license: "payg"
+    version: "6.2.3"
+

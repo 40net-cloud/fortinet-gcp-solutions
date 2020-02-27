@@ -1,0 +1,11 @@
+imports:
+- path: fortigate-security-hub.jinja
+
+resources:
+- name: SecurityHub
+  type: fortigate-security-hub.jinja
+  properties:
+    region: europe-west1
+    zone1: europe-west1-d
+    zone2: europe-west1-c
+    fgtInstanceType: e2-highcpu-4
