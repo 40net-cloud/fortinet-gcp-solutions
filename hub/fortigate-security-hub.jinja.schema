@@ -4,7 +4,7 @@ info:
 
 imports:
 - path: vpc.jinja
-- path: singlevm.jinja
+- path: ha-ap.jinja
 
 properties:
   region:

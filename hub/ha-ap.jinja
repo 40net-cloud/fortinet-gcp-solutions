@@ -8,6 +8,11 @@
 {% endif %}
 
 resources:
+- name: {{ env.deployment }}-ext-ip
+  type: compute.v1.address
+  properties:
+    region: {{ properties.region }}
+    description: Floating public IP for FGT cluster
 - name: {{ env["deployment"]}}-fgt1
   type: compute.v1.instance
   properties:
@@ -18,6 +23,10 @@ resources:
       type: PERSISTENT
       boot: true
       autoDelete: true
+      guestOsFeatures:
+      - type: MULTI_IP_SUBNET
+      licenses:
+      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
       initializeParams:
         sourceImage: {{ firmwareImage }}
         diskSizeGb: 10.0
@@ -28,12 +37,16 @@ resources:
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
+        natIP: $(ref.{{ env.deployment}}-ext-ip.address)
     - network: {{ properties["haVpc"]}}
       subnetwork: {{ properties["haSubnet"]}}
       networkIP: 10.0.0.130
     - network: {{ properties["mgmtVpc"]}}
       subnetwork: {{ properties["mgmtSubnet"]}}
-      networkIP: 10.0.0.194  
+      networkIP: 10.0.0.194
+      accessConfigs:
+      - name: Mgmt A
+        type: ONE_TO_ONE_NAT
     canIpForward: Yes
     serviceAccounts:
     - email: {{ properties.serviceAccount }}
@@ -44,27 +57,31 @@ resources:
       - 'https://www.googleapis.com/auth/compute'
     metadata:
       items:
+      - key: serial-port-enable
+        value: true
       - key: user-data
         value: |
           config system global
             set hostname "{{ env.deployment }}-fgt1"
           end
-          config router static
-            edit 1
-            set dst 10.0.0.129/32
-            set device port2
+          config system interface
+            edit port1
+              set description data
+              set mode static
+              set ip 10.0.0.2/25
+              set allowaccess ping https ssh fgfm
             next
-            edit 2
-            set dst 10.0.0.128/26
-            set gateway 10.0.0.129
+            edit port2
+              set description hasync
+              set mode static
+              set ip 10.0.0.130/26
+              set allowaccess ping
             next
-            edit 3
-            set dst 10.0.0.193/32
-            set device port3
-            next
-            edit 4
-            set dst 10.0.0.192/26
-            set gateway 10.0.0.193
+            edit port3
+              set description hamgmt
+              set mode static
+              set ip 10.0.0.194/26
+              set allowaccess ping https ssh fgfm
             next
           end
           config system ha
@@ -81,30 +98,36 @@ resources:
               set gateway 10.0.0.193
               next
             end
-            set override enable
+            set override disable
             set priority 200
             set unicast-hb enable
             set unicast-hb-peerip 10.0.0.131
-            set unicast-hb-netmask 255.255.255.0
+            set unicast-hb-netmask 255.255.255.192
+          end
+          config router static
+            edit 1
+              set device port1
+              set gateway 10.0.0.1
+            next
           end
           config system sdn-connector
             edit "gcp_conn"
             set type gcp
             set ha-status enable
             config external-ip
-            edit "reserve-fgthapublic"
-            next
-          end
-          config route
-            edit "route-internal"
-            next
-          end
-          set use-metadata-iam enable
+              edit "{{ env.deployment }}-ext-ip"
+              next
+            end
+            config route
+              edit "{{ env.deployment }}-default-via-fgt"
+              next
+            end
           next
           end
     tags:
       items:
        - {{env["deployment"]}}-fgt
+       - fgt
 - name: {{ env["deployment"]}}-fgt2
   type: compute.v1.instance
   properties:
@@ -115,6 +138,10 @@ resources:
       type: PERSISTENT
       boot: true
       autoDelete: true
+      guestOsFeatures:
+      - type: MULTI_IP_SUBNET
+      licenses:
+      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
       initializeParams:
         sourceImage: {{ firmwareImage }}
         diskSizeGb: 10.0
@@ -122,15 +149,15 @@ resources:
     - network: {{ properties["vpc"]}}
       subnetwork: {{ properties["subnet"]}}
       networkIP: 10.0.0.3
-      accessConfigs:
-      - name: External NAT
-        type: ONE_TO_ONE_NAT
     - network: {{ properties["haVpc"]}}
       subnetwork: {{ properties["haSubnet"]}}
       networkIP: 10.0.0.131
     - network: {{ properties["mgmtVpc"]}}
       subnetwork: {{ properties["mgmtSubnet"]}}
-      networkIP: 10.0.0.195  
+      networkIP: 10.0.0.195
+      accessConfigs:
+      - name: MGMT B
+        type: ONE_TO_ONE_NAT
     canIpForward: Yes
     serviceAccounts:
     - email: {{ properties.serviceAccount }}
@@ -146,47 +173,75 @@ resources:
           config system global
             set hostname "{{ env.deployment }}-fgt2"
           end
+          config system interface
+            edit port1
+              set description data
+              set mode static
+              set ip 10.0.0.3/25
+              set allowaccess ping https ssh fgfm
+            next
+            edit port2
+              set description hasync
+              set mode static
+              set ip 10.0.0.131/26
+              set allowaccess ping
+            next
+            edit port3
+              set description hamgmt
+              set mode static
+              set ip 10.0.0.195/26
+              set allowaccess ping https ssh fgfm
+            next
+          end
           config router static
             edit 1
-            set dst 10.0.0.129/32
-            set device port2
+              set dst 0.0.0.0/0
+              set gateway 10.0.0.1
+              set device port1
             next
             edit 2
-            set dst 10.0.0.128/26
-            set gateway 10.0.0.129
-            next
-            edit 3
-            set dst 10.0.0.193/32
-            set device port3
-            next
-            edit 4
-            set dst 10.0.0.192/26
-            set gateway 10.0.0.193
+              set dst 169.254.169.254/32
+              set device port1
             next
           end
           config system ha
-          set group-id 21
-          set group-name "cluster1"
-          set mode a-p
-          set hbdev "port2" 50
-          set session-pickup enable
-          set session-pickup-connectionless enable
-          set ha-mgmt-status enable
-          config ha-mgmt-interfaces
-          edit 1
-          set interface "port3"
-          set gateway 10.0.0.193
-          next
+            set group-id 21
+            set group-name "cluster1"
+            set mode a-p
+            set hbdev "port2" 50
+            set session-pickup enable
+            set session-pickup-connectionless enable
+            set ha-mgmt-status enable
+            config ha-mgmt-interfaces
+              edit 1
+              set interface "port3"
+              set gateway 10.0.0.193
+              next
+            end
+            set override disable
+            set priority 100
+            set unicast-hb enable
+            set unicast-hb-peerip 10.0.0.130
+            set unicast-hb-netmask 255.255.255.192
           end
-          set override enable
-          set priority 200
-          set unicast-hb enable
-          set unicast-hb-peerip 10.0.0.130
-          set unicast-hb-netmask 255.255.255.0
+          config system sdn-connector
+            edit "gcp_conn"
+            set type gcp
+            set ha-status enable
+            config external-ip
+              edit "{{ env.deployment }}-ext-ip"
+              next
+            end
+            config route
+              edit "{{ env.deployment }}-default-via-fgt"
+              next
+            end
+            next
           end
     tags:
       items:
        - {{env["deployment"]}}-fgt
+       - fgt
 - name: {{ env["deployment"]}}-fgt-allow-in
   type: compute.v1.firewall
   properties:
@@ -202,6 +257,17 @@ resources:
     - IPProtocol: ICMP
     - IPProtocol: ESP
     - IPProtocol: AH
+- name: {{ env["deployment"]}}-fgt-allow-mgmt
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.mgmtVpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{env.deployment}}-fgt
+    allowed:
+    - IPProtocol: TCP
 - name: {{ env.deployment }}-fgt-route-direct
   type: compute.v1.route
   properties:

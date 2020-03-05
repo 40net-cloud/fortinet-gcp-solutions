@@ -57,6 +57,9 @@ resources:
     dependsOn:
     - {{ hubVpcName }}
     - {{ spokeVpcName }}
+    {% if prevPeering is defined %}
+    - {{ prevPeering }}
+    {% endif %}
 - name: {{ env.deployment }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
   type: gcp-types/compute-v1:compute.networks.addPeering
   properties:
@@ -68,7 +71,9 @@ resources:
     exportCustomRoutes: true
   metadata:
     dependsOn:
-    - {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}  
+    - {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+{# add explicit 0.0.0.0 routing via peering here. don't forget dependency #}
+{% set prevPeering=env.deployment~ '-peering-' ~spoke.name~ '-' ~properties.hubNetwork.name %}
 {% endfor %}
 
 outputs:
