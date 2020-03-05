@@ -13,6 +13,16 @@ resources:
   properties:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
+- name: {{ env.deployment }}-fgt1-logdisk
+  type: compute.v1.disk
+  properties:
+    zone: {{ properties.zone1 }}
+    diskSizeGb: 30.0
+- name: {{ env.deployment }}-fgt2-logdisk
+  type: compute.v1.disk
+  properties:
+    zone: {{ properties.zone1 }}
+    diskSizeGb: 30.0
 - name: {{ env["deployment"]}}-fgt1
   type: compute.v1.instance
   properties:
@@ -30,6 +40,11 @@ resources:
       initializeParams:
         sourceImage: {{ firmwareImage }}
         diskSizeGb: 10.0
+    - deviceName: {{ env.deployment }}-fgt1-logdisk
+      source: $(ref.{{ env.deployment }}-fgt1-logdisk.selfLink)
+      type: PERSISTENT
+      autoDelete: true
+      boot: false
     networkInterfaces:
     - network: {{ properties["vpc"]}}
       subnetwork: {{ properties["subnet"]}}
@@ -85,12 +100,10 @@ resources:
             next
           end
           config system ha
-            set group-id 21
             set group-name "cluster1"
             set mode a-p
             set hbdev "port2" 50
             set session-pickup enable
-            set session-pickup-connectionless enable
             set ha-mgmt-status enable
             config ha-mgmt-interfaces
               edit 1
@@ -145,6 +158,11 @@ resources:
       initializeParams:
         sourceImage: {{ firmwareImage }}
         diskSizeGb: 10.0
+    - deviceName: {{ env.deployment }}-fgt2-logdisk
+      source: $(ref.{{ env.deployment }}-fgt2-logdisk.selfLink)
+      type: PERSISTENT
+      autoDelete: true
+      boot: false
     networkInterfaces:
     - network: {{ properties["vpc"]}}
       subnetwork: {{ properties["subnet"]}}
@@ -168,6 +186,8 @@ resources:
       - 'https://www.googleapis.com/auth/compute'
     metadata:
       items:
+      - key: serial-port-enable
+        value: true
       - key: user-data
         value: |
           config system global
@@ -195,7 +215,6 @@ resources:
           end
           config router static
             edit 1
-              set dst 0.0.0.0/0
               set gateway 10.0.0.1
               set device port1
             next
@@ -205,12 +224,10 @@ resources:
             next
           end
           config system ha
-            set group-id 21
             set group-name "cluster1"
             set mode a-p
             set hbdev "port2" 50
             set session-pickup enable
-            set session-pickup-connectionless enable
             set ha-mgmt-status enable
             config ha-mgmt-interfaces
               edit 1
