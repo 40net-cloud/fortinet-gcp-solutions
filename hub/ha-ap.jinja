@@ -7,6 +7,14 @@
   {% endif %}
 {% endif %}
 
+{% if properties.license == "byol" %}
+imports:
+- path: license1.lic
+  name: license1.lic
+- path: license2.lic
+  name: license2.lic
+{% endif %}
+
 resources:
 - name: {{ env.deployment }}-ext-ip
   type: compute.v1.address
@@ -21,7 +29,7 @@ resources:
 - name: {{ env.deployment }}-fgt2-logdisk
   type: compute.v1.disk
   properties:
-    zone: {{ properties.zone1 }}
+    zone: {{ properties.zone2 }}
     diskSizeGb: 30.0
 - name: {{ env["deployment"]}}-fgt1
   type: compute.v1.instance
@@ -74,6 +82,10 @@ resources:
       items:
       - key: serial-port-enable
         value: true
+{% if properties.license == "byol" %}
+      - key: license
+        value: license1.lic
+{% endif %}
       - key: user-data
         value: |
           config system global
@@ -188,6 +200,10 @@ resources:
       items:
       - key: serial-port-enable
         value: true
+{% if properties.license == "byol" %}
+      - key: license
+        value: license2.lic
+{% endif %}
       - key: user-data
         value: |
           config system global
@@ -216,10 +232,6 @@ resources:
           config router static
             edit 1
               set gateway 10.0.0.1
-              set device port1
-            next
-            edit 2
-              set dst 169.254.169.254/32
               set device port1
             next
           end
@@ -278,6 +290,17 @@ resources:
   type: compute.v1.firewall
   properties:
     network: {{ properties.mgmtVpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{env.deployment}}-fgt
+    allowed:
+    - IPProtocol: TCP
+- name: {{ env["deployment"]}}-fgt-allow-ha
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.haVpc }}
     priority: 100
     sourceRanges:
     - 0.0.0.0/0

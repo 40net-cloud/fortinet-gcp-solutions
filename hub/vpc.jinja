@@ -72,7 +72,6 @@ resources:
   metadata:
     dependsOn:
     - {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
-{# add explicit 0.0.0.0 routing via peering here. don't forget dependency #}
 {% set prevPeering=env.deployment~ '-peering-' ~spoke.name~ '-' ~properties.hubNetwork.name %}
 {% endfor %}
 
