@@ -1,6 +1,8 @@
 imports:
 - path: vpc.jinja
 - path: ha-ap.jinja
+- path: license1.lic
+- path: license2.lic
 
 resources:
 - name: HubVPC
@@ -27,6 +29,6 @@ resources:
     mgmtVpc: $(ref.HubVPC.mgmtVpcRef)
     mgmtSubnet: $(ref.HubVPC.mgmtSubnetRef)
     serviceAccount: {{ properties.fgtServiceAccount }}
-    license: "payg"
-    version: "6.2.3"
+    license: {{ properties.license }}
+    version: {{ properties.version }}
 

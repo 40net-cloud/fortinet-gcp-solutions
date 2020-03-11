@@ -1,18 +1,10 @@
 {% if properties.version == "6.2.3" %}
-  {% if properties.license == "byol" %}
+  {% if properties.license.type == "byol" %}
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-623-20191223-001-w-license" %}
   {% endif %}
-  {% if properties.license == "payg" %}
+  {% if properties.license.type == "payg" %}
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-623-20191223-001-w-license" %}
   {% endif %}
-{% endif %}
-
-{% if properties.license == "byol" %}
-imports:
-- path: license1.lic
-  name: license1.lic
-- path: license2.lic
-  name: license2.lic
 {% endif %}
 
 resources:
@@ -79,7 +71,7 @@ resources:
       - 'https://www.googleapis.com/auth/monitoring.write'
       - 'https://www.googleapis.com/auth/compute'
     metadata:
-    {% if properties.license == "payg" %}
+    {% if properties.license.type == "payg" %}
       # give secondary time to verify PAYG license
       dependsOn:
       - {{ properties.prefix}}-fgt2
@@ -87,10 +79,11 @@ resources:
       items:
       - key: serial-port-enable
         value: true
-{% if properties.license == "byol" %}
+    {% if properties.license.type == "byol" %}
       - key: license
-        value: license1.lic
-{% endif %}
+        value: |
+          {{ imports[properties.license.lic1] | indent(10) }}
+    {% endif %}
       - key: user-data
         value: |
           config system global
@@ -209,10 +202,11 @@ resources:
       items:
       - key: serial-port-enable
         value: true
-{% if properties.license == "byol" %}
+      {% if properties.license.type == "byol" %}
       - key: license
-        value: license2.lic
-{% endif %}
+        value: |
+          {{ imports[properties.license.lic2] | indent(10) }}
+      {% endif %}
       - key: user-data
         value: |
           config system global

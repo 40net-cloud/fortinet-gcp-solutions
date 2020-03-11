@@ -22,6 +22,13 @@ properties:
   fgtServiceAccount:
     type: string
     default: default
+  license:
+    type: object
+    default:
+      type: payg
+  version:
+    type: string
+    default: "6.2.3"
   hubNetwork:
     type: object
     description: Name suffix and IP Range for Hub VPC network
