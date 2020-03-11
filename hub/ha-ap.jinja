@@ -16,22 +16,22 @@ imports:
 {% endif %}
 
 resources:
-- name: {{ env.deployment }}-ext-ip
+- name: {{ properties.prefix }}-ext-ip
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
-- name: {{ env.deployment }}-fgt1-logdisk
+- name: {{ properties.prefix }}-fgt1-logdisk
   type: compute.v1.disk
   properties:
     zone: {{ properties.zone1 }}
     diskSizeGb: 30.0
-- name: {{ env.deployment }}-fgt2-logdisk
+- name: {{ properties.prefix }}-fgt2-logdisk
   type: compute.v1.disk
   properties:
     zone: {{ properties.zone2 }}
     diskSizeGb: 30.0
-- name: {{ env["deployment"]}}-fgt1
+- name: {{ properties.prefix }}-fgt1
   type: compute.v1.instance
   properties:
     zone: {{ properties["zone1"]}}
@@ -48,8 +48,8 @@ resources:
       initializeParams:
         sourceImage: {{ firmwareImage }}
         diskSizeGb: 10.0
-    - deviceName: {{ env.deployment }}-fgt1-logdisk
-      source: $(ref.{{ env.deployment }}-fgt1-logdisk.selfLink)
+    - deviceName: {{ properties.prefix }}-fgt1-logdisk
+      source: $(ref.{{ properties.prefix }}-fgt1-logdisk.selfLink)
       type: PERSISTENT
       autoDelete: true
       boot: false
@@ -60,7 +60,7 @@ resources:
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
-        natIP: $(ref.{{ env.deployment}}-ext-ip.address)
+        natIP: $(ref.{{ properties.prefix}}-ext-ip.address)
     - network: {{ properties["haVpc"]}}
       subnetwork: {{ properties["haSubnet"]}}
       networkIP: 10.0.0.130
@@ -79,6 +79,11 @@ resources:
       - 'https://www.googleapis.com/auth/monitoring.write'
       - 'https://www.googleapis.com/auth/compute'
     metadata:
+    {% if properties.license == "payg" %}
+      # give secondary time to verify PAYG license
+      dependsOn:
+      - {{ properties.prefix}}-fgt2
+    {% endif %}
       items:
       - key: serial-port-enable
         value: true
@@ -89,7 +94,7 @@ resources:
       - key: user-data
         value: |
           config system global
-            set hostname "{{ env.deployment }}-fgt1"
+            set hostname "{{ properties.prefix }}-fgt1"
           end
           config system interface
             edit port1
@@ -140,20 +145,20 @@ resources:
             set type gcp
             set ha-status enable
             config external-ip
-              edit "{{ env.deployment }}-ext-ip"
+              edit "{{ properties.prefix }}-ext-ip"
               next
             end
             config route
-              edit "{{ env.deployment }}-default-via-fgt"
+              edit "{{ properties.prefix }}-default-via-fgt"
               next
             end
           next
           end
     tags:
       items:
-       - {{env["deployment"]}}-fgt
+       - {{properties.prefix}}-fgt
        - fgt
-- name: {{ env["deployment"]}}-fgt2
+- name: {{ properties.prefix}}-fgt2
   type: compute.v1.instance
   properties:
     zone: {{ properties["zone2"]}}
@@ -170,8 +175,8 @@ resources:
       initializeParams:
         sourceImage: {{ firmwareImage }}
         diskSizeGb: 10.0
-    - deviceName: {{ env.deployment }}-fgt2-logdisk
-      source: $(ref.{{ env.deployment }}-fgt2-logdisk.selfLink)
+    - deviceName: {{ properties.prefix }}-fgt2-logdisk
+      source: $(ref.{{ properties.prefix }}-fgt2-logdisk.selfLink)
       type: PERSISTENT
       autoDelete: true
       boot: false
@@ -179,6 +184,10 @@ resources:
     - network: {{ properties["vpc"]}}
       subnetwork: {{ properties["subnet"]}}
       networkIP: 10.0.0.3
+      accessConfigs:
+      # needed for payg activation
+      - name: Temporary External
+        type: ONE_TO_ONE_NAT
     - network: {{ properties["haVpc"]}}
       subnetwork: {{ properties["haSubnet"]}}
       networkIP: 10.0.0.131
@@ -207,7 +216,7 @@ resources:
       - key: user-data
         value: |
           config system global
-            set hostname "{{ env.deployment }}-fgt2"
+            set hostname "{{ properties.prefix }}-fgt2"
           end
           config system interface
             edit port1
@@ -258,20 +267,20 @@ resources:
             set type gcp
             set ha-status enable
             config external-ip
-              edit "{{ env.deployment }}-ext-ip"
+              edit "{{ properties.prefix }}-ext-ip"
               next
             end
             config route
-              edit "{{ env.deployment }}-default-via-fgt"
+              edit "{{ properties.prefix }}-default-via-fgt"
               next
             end
             next
           end
     tags:
       items:
-       - {{env["deployment"]}}-fgt
+       - {{properties.prefix}}-fgt
        - fgt
-- name: {{ env["deployment"]}}-fgt-allow-in
+- name: {{ properties.prefix}}-fgt-allow-in
   type: compute.v1.firewall
   properties:
     network: {{ properties.vpc }}
@@ -279,14 +288,14 @@ resources:
     sourceRanges:
     - 0.0.0.0/0
     targetTags:
-    - {{env["deployment"]}}-fgt
+    - {{properties.prefix}}-fgt
     allowed:
     - IPProtocol: TCP
     - IPProtocol: UDP
     - IPProtocol: ICMP
     - IPProtocol: ESP
     - IPProtocol: AH
-- name: {{ env["deployment"]}}-fgt-allow-mgmt
+- name: {{ properties.prefix}}-fgt-allow-mgmt
   type: compute.v1.firewall
   properties:
     network: {{ properties.mgmtVpc }}
@@ -294,10 +303,10 @@ resources:
     sourceRanges:
     - 0.0.0.0/0
     targetTags:
-    - {{env.deployment}}-fgt
+    - {{properties.prefix}}-fgt
     allowed:
     - IPProtocol: TCP
-- name: {{ env["deployment"]}}-fgt-allow-ha
+- name: {{ properties.prefix }}-fgt-allow-ha
   type: compute.v1.firewall
   properties:
     network: {{ properties.haVpc }}
@@ -305,10 +314,10 @@ resources:
     sourceRanges:
     - 0.0.0.0/0
     targetTags:
-    - {{env.deployment}}-fgt
+    - {{ properties.prefix }}-fgt
     allowed:
     - IPProtocol: TCP
-- name: {{ env.deployment }}-fgt-route-direct
+- name: {{ properties.prefix }}-fgt-route-direct
   type: compute.v1.route
   properties:
     network: {{ properties.vpc }}
@@ -316,11 +325,11 @@ resources:
     nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
     priority: 10
     tags:
-    - {{env["deployment"]}}-fgt
-- name: {{ env.deployment }}-default-via-fgt
+    - {{ properties.prefix }}-fgt
+- name: {{ properties.prefix }}-default-via-fgt
   type: compute.v1.route
   properties:
     network: {{ properties.vpc }}
     destRange: 0.0.0.0/0
-    nextHopIp: $(ref.{{ env["deployment"]}}-fgt1.networkInterfaces[0].networkIP)
+    nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[0].networkIP)
     priority: 100

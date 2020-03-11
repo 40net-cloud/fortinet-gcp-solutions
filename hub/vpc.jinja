@@ -1,4 +1,4 @@
-{% set hubVpcName = env.deployment ~ '-' ~ properties.hubNetwork.name %}
+{% set hubVpcName = properties.prefix ~ '-' ~ properties.hubNetwork.name %}
 {% set hubSubnetName = hubVpcName ~ '-subnet' %}
 
 resources:
@@ -12,28 +12,28 @@ resources:
     region: {{ properties.region }}
     network: $(ref.{{ hubVpcName }}.selfLink)
     ipCidrRange: {{ properties.hubNetwork.ipCidrRange }}
-- name: {{ env.deployment }}-{{ properties.haNetwork.name }}
+- name: {{ properties.prefix }}-{{ properties.haNetwork.name }}
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: no
-- name: {{ env.deployment }}-{{ properties.haNetwork.name }}-subnet
+- name: {{ properties.prefix }}-{{ properties.haNetwork.name }}-subnet
   type: compute.v1.subnetwork
   properties:
     region: {{properties.region }}
-    network: $(ref.{{ env.deployment }}-{{ properties.haNetwork.name }}.selfLink)
+    network: $(ref.{{ properties.prefix }}-{{ properties.haNetwork.name }}.selfLink)
     ipCidrRange: {{properties.haNetwork.ipCidrRange}}
-- name: {{ env.deployment }}-{{ properties.mgmtNetwork.name }}
+- name: {{ properties.prefix }}-{{ properties.mgmtNetwork.name }}
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: no
-- name: {{ env.deployment }}-{{ properties.mgmtNetwork.name }}-subnet
+- name: {{ properties.prefix }}-{{ properties.mgmtNetwork.name }}-subnet
   type: compute.v1.subnetwork
   properties:
     region: {{properties.region }}
-    network: $(ref.{{ env.deployment }}-{{ properties.mgmtNetwork.name }}.selfLink)
+    network: $(ref.{{ properties.prefix }}-{{ properties.mgmtNetwork.name }}.selfLink)
     ipCidrRange: {{properties.mgmtNetwork.ipCidrRange}}
 {% for spoke in properties.spokeNetworks %}
-{% set spokeVpcName = env.deployment ~ '-' ~ spoke.name %}
+{% set spokeVpcName = properties.prefix ~ '-' ~ spoke.name %}
 - name: {{ spokeVpcName }}
   type: compute.v1.network
   properties:
@@ -44,10 +44,10 @@ resources:
     region: {{properties["region"]}}
     network: $(ref.{{ spokeVpcName }}.selfLink)
     ipCidrRange: {{ spoke.ipCidrRange }}
-- name: {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+- name: {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
   type: gcp-types/compute-v1:compute.networks.addPeering
   properties:
-    name: {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+    name: {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
     network: {{ spokeVpcName }}
     peerNetwork: $(ref.{{ hubVpcName }}.selfLink)
     autoCreateRoutes: true
@@ -57,13 +57,13 @@ resources:
     dependsOn:
     - {{ hubVpcName }}
     - {{ spokeVpcName }}
-    {% if prevPeering is defined %}
+    {% if prevPeering is defined() %}
     - {{ prevPeering }}
     {% endif %}
-- name: {{ env.deployment }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
+- name: {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
   type: gcp-types/compute-v1:compute.networks.addPeering
   properties:
-    name: {{ env.deployment }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
+    name: {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
     network: {{ hubVpcName }}
     peerNetwork: $(ref.{{ spokeVpcName }}.selfLink)
     autoCreateRoutes: true
@@ -71,8 +71,8 @@ resources:
     exportCustomRoutes: true
   metadata:
     dependsOn:
-    - {{ env.deployment }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
-{% set prevPeering=env.deployment~ '-peering-' ~spoke.name~ '-' ~properties.hubNetwork.name %}
+    - {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+{% set prevPeering=properties.prefix~ '-peering-' ~spoke.name~ '-' ~properties.hubNetwork.name %}
 {% endfor %}
 
 outputs:
@@ -81,10 +81,10 @@ outputs:
 - name: hubSubnetRef
   value: $(ref.{{ hubSubnetName }}.selfLink)
 - name: haVpcRef
-  value: $(ref.{{ env.deployment }}-{{ properties.haNetwork.name }}.selfLink)
+  value: $(ref.{{ properties.prefix }}-{{ properties.haNetwork.name }}.selfLink)
 - name: haSubnetRef
-  value: $(ref.{{ env.deployment }}-{{ properties.haNetwork.name }}-subnet.selfLink)
+  value: $(ref.{{ properties.prefix }}-{{ properties.haNetwork.name }}-subnet.selfLink)
 - name: mgmtVpcRef
-  value: $(ref.{{ env.deployment }}-{{ properties.mgmtNetwork.name }}.selfLink)
+  value: $(ref.{{ properties.prefix }}-{{ properties.mgmtNetwork.name }}.selfLink)
 - name: mgmtSubnetRef
-  value: $(ref.{{ env.deployment }}-{{ properties.mgmtNetwork.name }}-subnet.selfLink)
+  value: $(ref.{{ properties.prefix }}-{{ properties.mgmtNetwork.name }}-subnet.selfLink)

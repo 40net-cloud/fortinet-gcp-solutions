@@ -6,6 +6,7 @@ resources:
 - name: HubVPC
   type: vpc.jinja
   properties:
+    prefix: {{ env.deployment }}
     region: {{ properties["region"]}}
     hubNetwork: {{ properties["hubNetwork"]}}
     haNetwork: {{ properties["haNetwork"]}}
@@ -14,6 +15,7 @@ resources:
 - name: Fortigate HA
   type: ha-ap.jinja
   properties:
+    prefix: {{ env.deployment }}
     region: {{ properties.region }}
     zone1: {{ properties["zone1"]}}
     zone2: {{ properties["zone2"]}}
@@ -27,7 +29,4 @@ resources:
     serviceAccount: {{ properties.fgtServiceAccount }}
     license: "payg"
     version: "6.2.3"
-    metadata:
-      dependsOn:
-      - HubVPC
 
