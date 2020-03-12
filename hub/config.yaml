@@ -2,6 +2,7 @@ imports:
 - path: fortigate-security-hub.jinja
 - path: license1.lic
 - path: license2.lic
+- path: utils/netcalc.jinja
 
 resources:
 - name: SecurityHub

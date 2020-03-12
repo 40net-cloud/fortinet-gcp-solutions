@@ -22,13 +22,19 @@ resources:
     zone1: {{ properties["zone1"]}}
     zone2: {{ properties["zone2"]}}
     instanceType: {{ properties["fgtInstanceType"]}}
-    vpc: $(ref.HubVPC.hubVpcRef)
-    subnet: $(ref.HubVPC.hubSubnetRef)
-    haVpc: $(ref.HubVPC.haVpcRef)
-    haSubnet: $(ref.HubVPC.haSubnetRef)
-    mgmtVpc: $(ref.HubVPC.mgmtVpcRef)
-    mgmtSubnet: $(ref.HubVPC.mgmtSubnetRef)
     serviceAccount: {{ properties.fgtServiceAccount }}
     license: {{ properties.license }}
     version: {{ properties.version }}
-
+    networks:
+      data:
+        vpc: $(ref.HubVPC.hubVpcRef)
+        subnet: $(ref.HubVPC.hubSubnetRef)
+        cidr: {{ properties.hubNetwork.ipCidrRange }}
+      hasync:
+        vpc: $(ref.HubVPC.haVpcRef)
+        subnet: $(ref.HubVPC.haSubnetRef)
+        cidr: {{ properties.haNetwork.ipCidrRange }}
+      mgmt:
+        vpc: $(ref.HubVPC.mgmtVpcRef)
+        subnet: $(ref.HubVPC.mgmtSubnetRef)
+        cidr: {{ properties.mgmtNetwork.ipCidrRange }}

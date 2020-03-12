@@ -7,6 +7,8 @@
   {% endif %}
 {% endif %}
 
+{% import "utils/netcalc.jinja" as netcalc %}
+
 resources:
 - name: {{ properties.prefix }}-ext-ip
   type: compute.v1.address
@@ -46,19 +48,19 @@ resources:
       autoDelete: true
       boot: false
     networkInterfaces:
-    - network: {{ properties["vpc"]}}
-      subnetwork: {{ properties["subnet"]}}
-      networkIP: 10.0.0.2
+    - network: {{ properties.networks.data.vpc }}
+      subnetwork: {{ properties.networks.data.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.data.cidr, 1 ) }}
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
-        natIP: $(ref.{{ properties.prefix}}-ext-ip.address)
-    - network: {{ properties["haVpc"]}}
-      subnetwork: {{ properties["haSubnet"]}}
-      networkIP: 10.0.0.130
-    - network: {{ properties["mgmtVpc"]}}
-      subnetwork: {{ properties["mgmtSubnet"]}}
-      networkIP: 10.0.0.194
+        natIP: $(ref.{{ properties.prefix }}-ext-ip.address)
+    - network: {{ properties.networks.hasync.vpc }}
+      subnetwork: {{ properties.networks.hasync.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 1 )}}
+    - network: {{ properties.networks.mgmt.vpc }}
+      subnetwork: {{ properties.networks.mgmt.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 1 )}}
       accessConfigs:
       - name: Mgmt A
         type: ONE_TO_ONE_NAT
@@ -93,19 +95,19 @@ resources:
             edit port1
               set description data
               set mode static
-              set ip 10.0.0.2/25
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.data.cidr, 1 )}}
               set allowaccess ping https ssh fgfm
             next
             edit port2
               set description hasync
               set mode static
-              set ip 10.0.0.130/26
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.cidr, 1 )}}
               set allowaccess ping
             next
             edit port3
-              set description hamgmt
+              set description mgmt
               set mode static
-              set ip 10.0.0.194/26
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.cidr, 1 )}}
               set allowaccess ping https ssh fgfm
             next
           end
@@ -118,19 +120,19 @@ resources:
             config ha-mgmt-interfaces
               edit 1
               set interface "port3"
-              set gateway 10.0.0.193
+              set gateway {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 0 )}}
               next
             end
             set override disable
             set priority 200
             set unicast-hb enable
-            set unicast-hb-peerip 10.0.0.131
-            set unicast-hb-netmask 255.255.255.192
+            set unicast-hb-peerip {{ netcalc.getNthIp( properties.networks.hasync.cidr, 2 )}}
+            set unicast-hb-netmask {{ netcalc.getNetmaskLong( properties.networks.hasync.cidr )}}
           end
           config router static
             edit 1
               set device port1
-              set gateway 10.0.0.1
+              set gateway {{ netcalc.getNthIp( properties.networks.data.cidr, 0 )}}
             next
           end
           config system sdn-connector
@@ -174,19 +176,19 @@ resources:
       autoDelete: true
       boot: false
     networkInterfaces:
-    - network: {{ properties["vpc"]}}
-      subnetwork: {{ properties["subnet"]}}
-      networkIP: 10.0.0.3
+    - network: {{ properties.networks.data.vpc }}
+      subnetwork: {{ properties.networks.data.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.data.cidr, 2 )}}
       accessConfigs:
       # needed for payg activation
       - name: Temporary External
         type: ONE_TO_ONE_NAT
-    - network: {{ properties["haVpc"]}}
-      subnetwork: {{ properties["haSubnet"]}}
-      networkIP: 10.0.0.131
-    - network: {{ properties["mgmtVpc"]}}
-      subnetwork: {{ properties["mgmtSubnet"]}}
-      networkIP: 10.0.0.195
+    - network: {{ properties.networks.hasync.vpc }}
+      subnetwork: {{ properties.networks.hasync.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 2 )}}
+    - network: {{ properties.networks.mgmt.vpc }}
+      subnetwork: {{ properties.networks.mgmt.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 2 )}}
       accessConfigs:
       - name: MGMT B
         type: ONE_TO_ONE_NAT
@@ -216,25 +218,25 @@ resources:
             edit port1
               set description data
               set mode static
-              set ip 10.0.0.3/25
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.data.cidr, 2 )}}
               set allowaccess ping https ssh fgfm
             next
             edit port2
               set description hasync
               set mode static
-              set ip 10.0.0.131/26
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.cidr, 2 )}}
               set allowaccess ping
             next
             edit port3
               set description hamgmt
               set mode static
-              set ip 10.0.0.195/26
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.cidr, 2 )}}
               set allowaccess ping https ssh fgfm
             next
           end
           config router static
             edit 1
-              set gateway 10.0.0.1
+              set gateway {{ netcalc.getNthIp( properties.networks.data.cidr, 0 )}}
               set device port1
             next
           end
@@ -247,14 +249,14 @@ resources:
             config ha-mgmt-interfaces
               edit 1
               set interface "port3"
-              set gateway 10.0.0.193
+              set gateway {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 0 )}}
               next
             end
             set override disable
             set priority 100
             set unicast-hb enable
-            set unicast-hb-peerip 10.0.0.130
-            set unicast-hb-netmask 255.255.255.192
+            set unicast-hb-peerip {{ netcalc.getNthIp( properties.networks.hasync.cidr, 1 )}}
+            set unicast-hb-netmask {{ netcalc.getNetmaskLong( properties.networks.hasync.cidr )}}
           end
           config system sdn-connector
             edit "gcp_conn"
@@ -277,7 +279,7 @@ resources:
 - name: {{ properties.prefix}}-fgt-allow-in
   type: compute.v1.firewall
   properties:
-    network: {{ properties.vpc }}
+    network: {{ properties.networks.data.vpc }}
     priority: 100
     sourceRanges:
     - 0.0.0.0/0
@@ -292,7 +294,7 @@ resources:
 - name: {{ properties.prefix}}-fgt-allow-mgmt
   type: compute.v1.firewall
   properties:
-    network: {{ properties.mgmtVpc }}
+    network: {{ properties.networks.mgmt.vpc }}
     priority: 100
     sourceRanges:
     - 0.0.0.0/0
@@ -303,7 +305,7 @@ resources:
 - name: {{ properties.prefix }}-fgt-allow-ha
   type: compute.v1.firewall
   properties:
-    network: {{ properties.haVpc }}
+    network: {{ properties.networks.hasync.vpc }}
     priority: 100
     sourceRanges:
     - 0.0.0.0/0
@@ -314,7 +316,7 @@ resources:
 - name: {{ properties.prefix }}-fgt-route-direct
   type: compute.v1.route
   properties:
-    network: {{ properties.vpc }}
+    network: {{ properties.networks.data.vpc }}
     destRange: 0.0.0.0/0
     nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
     priority: 10
@@ -323,7 +325,7 @@ resources:
 - name: {{ properties.prefix }}-default-via-fgt
   type: compute.v1.route
   properties:
-    network: {{ properties.vpc }}
+    network: {{ properties.networks.data.vpc }}
     destRange: 0.0.0.0/0
     nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[0].networkIP)
     priority: 100
