@@ -1,23 +1,24 @@
 imports:
 - path: vpc.jinja
 - path: ha-ap.jinja
-- path: license1.lic
-- path: license2.lic
+
+{% import "utils/fgtconfig.jinja" as fgtconfig %}
+{% set prefix=env.deployment %}
 
 resources:
 - name: HubVPC
   type: vpc.jinja
   properties:
-    prefix: {{ env.deployment }}
+    prefix: {{ prefix }}
     region: {{ properties["region"]}}
     hubNetwork: {{ properties["hubNetwork"]}}
     haNetwork: {{ properties["haNetwork"]}}
     mgmtNetwork: {{ properties["mgmtNetwork"]}}
     spokeNetworks: {{ properties["spokeNetworks"]}}
-- name: Fortigate HA
+- name: Fortigate Cluster
   type: ha-ap.jinja
   properties:
-    prefix: {{ env.deployment }}
+    prefix: {{ prefix }}
     region: {{ properties.region }}
     zone1: {{ properties["zone1"]}}
     zone2: {{ properties["zone2"]}}
@@ -25,6 +26,8 @@ resources:
     serviceAccount: {{ properties.fgtServiceAccount }}
     license: {{ properties.license }}
     version: {{ properties.version }}
+    fwConfig: |
+      {{ fgtconfig.configSpokeAddresses( prefix, properties.spokeNetworks )|indent(6) }}
     networks:
       data:
         vpc: $(ref.HubVPC.hubVpcRef)
@@ -38,3 +41,8 @@ resources:
         vpc: $(ref.HubVPC.mgmtVpcRef)
         subnet: $(ref.HubVPC.mgmtSubnetRef)
         cidr: {{ properties.mgmtNetwork.ipCidrRange }}
+
+outputs:
+- name: peerings_script
+  value: |
+    {{ fgtconfig.fixPeerings( prefix, properties.spokeNetworks, properties.hubNetwork )|indent(4)}}

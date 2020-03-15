@@ -1,0 +1,18 @@
+{% macro configSpokeAddresses(prefix, spokeNetworks) -%}
+config firewall address
+{%- for spoke in spokeNetworks %}
+  edit {{ prefix }}-{{ spoke.name }}
+    set type dynamic
+    set sdn "gcp_conn"
+    set filter "Network={{ prefix }}-{{ spoke.name }}"
+  next
+{%- endfor %}
+end
+{%- endmacro %}
+
+{% macro fixPeerings(prefix, spokeNetworks, hubNetwork ) -%}
+{%- for spoke in spokeNetworks %}
+gcloud compute networks peerings update {{ prefix }}-peering-{{ hubNetwork.name }}-{{ spoke.name }} --network={{ prefix }}-{{ hubNetwork.name }} --export-custom-routes
+gcloud compute networks peerings update {{ prefix }}-peering-{{ spoke.name }}-{{ hubNetwork.name }} --network={{ prefix }}-{{ spoke.name }} --import-custom-routes
+{%- endfor -%}
+{%- endmacro %}

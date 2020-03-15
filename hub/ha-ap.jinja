@@ -149,6 +149,7 @@ resources:
             end
           next
           end
+          {{ properties.fwConfig | indent(10) }}
     tags:
       items:
        - {{properties.prefix}}-fgt
@@ -179,10 +180,12 @@ resources:
     - network: {{ properties.networks.data.vpc }}
       subnetwork: {{ properties.networks.data.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.data.cidr, 2 )}}
+      {% if properties.license.type == "payg" %}
       accessConfigs:
       # needed for payg activation
       - name: Temporary External
         type: ONE_TO_ONE_NAT
+      {% endif %}
     - network: {{ properties.networks.hasync.vpc }}
       subnetwork: {{ properties.networks.hasync.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 2 )}}
@@ -329,3 +332,9 @@ resources:
     destRange: 0.0.0.0/0
     nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[0].networkIP)
     priority: 100
+
+outputs:
+- name: FGT1-mgmt-ip
+  value: $(ref.{{ properties.prefix}}-fgt1.networkInterfaces[2])
+- name: FGT2-mgmt-ip
+  value: $(ref.{{ properties.prefix}}-fgt2.networkInterfaces[2])

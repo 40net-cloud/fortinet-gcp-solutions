@@ -57,8 +57,8 @@ resources:
     dependsOn:
     - {{ hubVpcName }}
     - {{ spokeVpcName }}
-    {% if prevPeering is defined() %}
-    - {{ prevPeering }}
+    {% if not loop.first %}
+    - {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ properties.spokeNetworks[loop.index0-1].name }}
     {% endif %}
 - name: {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
   type: gcp-types/compute-v1:compute.networks.addPeering
@@ -72,7 +72,6 @@ resources:
   metadata:
     dependsOn:
     - {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
-{% set prevPeering=properties.prefix~ '-peering-' ~spoke.name~ '-' ~properties.hubNetwork.name %}
 {% endfor %}
 
 outputs:
