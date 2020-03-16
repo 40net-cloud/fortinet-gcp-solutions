@@ -14,17 +14,7 @@ resources:
     zone1: europe-west1-d
     zone2: europe-west1-c
     fgtInstanceType: e2-highcpu-4
-    license: 
-      type: "byol"
-      lic1: license1.lic
-      lic2: license2.lic
-    spokeNetworks:
-    - name: one
-      ipCidrRange: 192.168.1.0/24
-    - name: two
-      ipCidrRange: 192.168.2.0/24
-    - name: three
-      ipCidrRange: 192.168.3.0/24
+
 
 outputs:
 - name: peerings_script

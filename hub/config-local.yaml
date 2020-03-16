@@ -1,10 +1,9 @@
 imports:
-- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/fortigate-security-hub.jinja
-  name: fortigate-security-hub.jinja
-- path: ttps://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/utils/netcalc.jinja
-  name: utils/netcalc.jinja
-- path: ttps://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/utils/fgtconfig.jinja
-  name: utils/fgtconfig.jinja
+- path: fortigate-security-hub.jinja
+- path: license1.lic
+- path: license2.lic
+- path: utils/netcalc.jinja
+- path: utils/fgtconfig.jinja
 
 resources:
 - name: SecurityHub
