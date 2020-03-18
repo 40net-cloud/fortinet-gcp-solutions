@@ -41,8 +41,3 @@ resources:
         vpc: $(ref.HubVPC.mgmtVpcRef)
         subnet: $(ref.HubVPC.mgmtSubnetRef)
         cidr: {{ properties.mgmtNetwork.ipCidrRange }}
-
-outputs:
-- name: peerings_script
-  value: |
-    {{ fgtconfig.fixPeerings( prefix, properties.spokeNetworks, properties.hubNetwork )|indent(4)}}

@@ -14,8 +14,3 @@ resources:
     zone1: europe-west1-d
     zone2: europe-west1-c
     fgtInstanceType: e2-highcpu-4
-
-
-outputs:
-- name: peerings_script
-  value: $(ref.SecurityHub.peerings_script)

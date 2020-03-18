@@ -25,7 +25,3 @@ resources:
       ipCidrRange: 192.168.2.0/24
     - name: three
       ipCidrRange: 192.168.3.0/24
-
-outputs:
-- name: peerings_script
-  value: $(ref.SecurityHub.peerings_script)

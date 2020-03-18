@@ -47,12 +47,12 @@ resources:
 - name: {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
   type: gcp-types/compute-v1:compute.networks.addPeering
   properties:
-    name: {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
     network: {{ spokeVpcName }}
-    peerNetwork: $(ref.{{ hubVpcName }}.selfLink)
-    autoCreateRoutes: true
-    exchangeSubnetRoutes: true
-    importCustomRoutes: true
+    networkPeering:
+      name: {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}
+      network: $(ref.{{ hubVpcName }}.selfLink)
+      exchangeSubnetRoutes: true
+      importCustomRoutes: true
   metadata:
     dependsOn:
     - {{ hubVpcName }}
@@ -63,12 +63,12 @@ resources:
 - name: {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
   type: gcp-types/compute-v1:compute.networks.addPeering
   properties:
-    name: {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
     network: {{ hubVpcName }}
-    peerNetwork: $(ref.{{ spokeVpcName }}.selfLink)
-    autoCreateRoutes: true
-    exchangeSubnetRoutes: true
-    exportCustomRoutes: true
+    networkPeering:
+      name: {{ properties.prefix }}-peering-{{ properties.hubNetwork.name }}-{{ spoke.name }}
+      network: $(ref.{{ spokeVpcName }}.selfLink)
+      exchangeSubnetRoutes: true
+      exportCustomRoutes: true
   metadata:
     dependsOn:
     - {{ properties.prefix }}-peering-{{ spoke.name }}-{{ properties.hubNetwork.name }}

@@ -28,6 +28,12 @@ Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC 
 ### Note:
 Current version of the template deploys a single NIC for data path without splitting it to internal and external network. Modification of this design will follow soon.
 
+# Licensing
+This template supports both PAYG and BYOL licensing (with PAYG as default setting). To deploy a BYOL version, add a `license` property to your config file with following values:
+      type: byol
+      lic1: path-to-license-file-for-master
+      lic2: path-to-license-file-for-slave
+
 # How to Deploy
 This template set uses Google Cloud [Deployment Manager](https://cloud.google.com/deployment-manager) to deploy all the resources.
 
@@ -53,14 +59,4 @@ Indicates service account to be used for the Fortigate instances. Fortigate need
 By default all deployed resources are prefixed with the deployment name (e.g. my-deployment-fgt1, my-deployment-peering-spoke1-hub). To change the prefix, modify the prefix variable at the top of `fortigate-security-hub.jinja` template.
 
 ## Post-deployment Steps
-As currently Deployment Manager does not support custom route import/export settings to be defined in a template, the settings must be corrected after deployment.
-
-### Using gcloud CLI tool
-Enable export custom routes on each peering from Hub VPC to each of spokes
-    gcloud compute networks peerings update \<prefix\>-peering-hub-spoke --network=\<prefix\>-hub --export-custom-routes
-Enable import custom routes on each peering from each spoke VPC to hub
-    gcloud compute networks peerings update \<prefix\>-peering-spoke-hub --network=\<prefix\>-spoke --import-custom-routes
-
-To make the task easier, template outputs a `peering_script` containing list of commands with all the proper spoke, hub and peerings names.
-
-### Using Web Console
+No manual post-deployment steps are needed anymore. Import/export routes is fixed in this version
