@@ -2,8 +2,11 @@ imports:
 - path: vpc.jinja
 - path: ha-ap.jinja
 
-{% import "utils/fgtconfig.jinja" as fgtconfig %}
+{% import "../utils/fgtconfig.jinja" as fgtconfig %}
+
+{% if not prefix is defined %}
 {% set prefix=env.deployment %}
+{% endif %}
 
 resources:
 - name: HubVPC
@@ -11,11 +14,9 @@ resources:
   properties:
     prefix: {{ prefix }}
     region: {{ properties["region"]}}
-    hubNetwork: {{ properties["hubNetwork"]}}
-    haNetwork: {{ properties["haNetwork"]}}
-    mgmtNetwork: {{ properties["mgmtNetwork"]}}
-    spokeNetworks: {{ properties["spokeNetworks"]}}
-- name: Fortigate Cluster
+    hubNetworks: {{properties.hubNetworks }}
+    spokeNetworks: {{ properties.spokeNetworks }}
+- name: Fortigate_Cluster
   type: ha-ap.jinja
   properties:
     prefix: {{ prefix }}
@@ -29,15 +30,25 @@ resources:
     fwConfig: |
       {{ fgtconfig.configSpokeAddresses( prefix, properties.spokeNetworks )|indent(6) }}
     networks:
-      data:
+      internal:
         vpc: $(ref.HubVPC.hubVpcRef)
         subnet: $(ref.HubVPC.hubSubnetRef)
-        cidr: {{ properties.hubNetwork.ipCidrRange }}
+        cidr: {{ properties.hubNetworks.internal.ipCidrRange }}
+      external:
+        vpc: $(ref.HubVPC.extVpcRef)
+        subnet: $(ref.HubVPC.extSubnetRef)
+        cidr: {{ properties.hubNetworks.external.ipCidrRange }}
       hasync:
         vpc: $(ref.HubVPC.haVpcRef)
         subnet: $(ref.HubVPC.haSubnetRef)
-        cidr: {{ properties.haNetwork.ipCidrRange }}
+        cidr: {{ properties.hubNetworks.hasync.ipCidrRange }}
       mgmt:
         vpc: $(ref.HubVPC.mgmtVpcRef)
         subnet: $(ref.HubVPC.mgmtSubnetRef)
-        cidr: {{ properties.mgmtNetwork.ipCidrRange }}
+        cidr: {{ properties.hubNetworks.mgmt.ipCidrRange }}
+
+outputs:
+- name: Management_IP
+  value:
+    Fortigate_A: $(ref.Fortigate_Cluster.FGT1-mgmt-ip)
+    Fortigate_B: $(ref.Fortigate_Cluster.FGT2-mgmt-ip)

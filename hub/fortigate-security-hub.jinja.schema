@@ -4,7 +4,6 @@ info:
 
 imports:
 - path: vpc.jinja
-- path: ha-ap.jinja
 
 properties:
   region:
@@ -29,24 +28,22 @@ properties:
   version:
     type: string
     default: "6.2.3"
-  hubNetwork:
+  hubNetworks:
     type: object
-    description: Name suffix and IP Range for Hub VPC network
+    description: Description of Hub networks. Precise content depends on Fortigate (cluster) to be deployed. HA A-P requires internal, external, hasync and mgmt properties.
     default:
-      name: hub
-      ipCidrRange: 10.0.0.0/25
-  haNetwork:
-    type: object
-    description: Name suffix and IP Range for HA VPC network
-    default:
-      name: ha
-      ipCidrRange: 10.0.0.128/26
-  mgmtNetwork:
-    type: object
-    description: Name suffix and IP Range for Management VPC network
-    default:
-      name: mgmt
-      ipCidrRange: 10.0.0.192/26
+      internal:
+        name: int
+        ipCidrRange: 10.0.0.64/26
+      external:
+        name: ext
+        ipCidrRange: 10.0.0.0/26
+      hasync:
+        name: hasync
+        ipCidrRange: 10.0.0.128/26
+      mgmt:
+        name: mgmt
+        ipCidrRange: 10.0.0.192/26
   spokeNetworks:
     type: array
     description: List of spoke network names and IP ranges. Note that final VPC and subnet name will be formed by adding a deployment name prefix.

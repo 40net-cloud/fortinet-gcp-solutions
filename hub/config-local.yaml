@@ -2,8 +2,10 @@ imports:
 - path: fortigate-security-hub.jinja
 - path: license1.lic
 - path: license2.lic
-- path: utils/netcalc.jinja
-- path: utils/fgtconfig.jinja
+- path: ../utils/netcalc.jinja
+- path: ../utils/fgtconfig.jinja
+- path: ../cluster_a-p/ha-ap.jinja
+  name: ha-ap.jinja
 
 resources:
 - name: SecurityHub
@@ -13,10 +15,6 @@ resources:
     zone1: europe-west1-d
     zone2: europe-west1-c
     fgtInstanceType: e2-highcpu-4
-    license: 
-      type: "byol"
-      lic1: license1.lic
-      lic2: license2.lic
     spokeNetworks:
     - name: one
       ipCidrRange: 192.168.1.0/24
@@ -24,3 +22,7 @@ resources:
       ipCidrRange: 192.168.2.0/24
     - name: three
       ipCidrRange: 192.168.3.0/24
+
+outputs:
+  - name: Management_IP
+    value: $(ref.SecurityHub.Management_IP)
