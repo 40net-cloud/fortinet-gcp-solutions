@@ -30,9 +30,11 @@ Current version of the template deploys a single NIC for data path without split
 
 # Licensing
 This template supports both PAYG and BYOL licensing (with PAYG as default setting). To deploy a BYOL version, add a `license` property to your config file with following values:
-      type: byol
-      lic1: path-to-license-file-for-master
-      lic2: path-to-license-file-for-slave
+```
+  type: byol
+  lic1: path-to-license-file-for-master
+  lic2: path-to-license-file-for-slave
+```
 
 # How to Deploy
 This template set uses Google Cloud [Deployment Manager](https://cloud.google.com/deployment-manager) to deploy all the resources.
