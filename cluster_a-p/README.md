@@ -1,6 +1,8 @@
 # Active-Passive HA Fortigate cluster
 This template deploys a standard A-P HA cluster of 2 Fortigate instances.
 
+![A-P HA Diagram](https://www.lucidchart.com/publicSegments/view/9fb2009b-32fa-4404-9009-4eb4529c988c/image.png)
+
 ## Failover automation
 Deployed Fortigates integrate with GCP fabric using an SDN Connector. Upon failover 2 actions are performed:
 - named route is switched to the IP of the now active node
