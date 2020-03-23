@@ -7,7 +7,11 @@
   {% endif %}
 {% endif %}
 
-{% import "utils/netcalc.jinja" as netcalc %}
+{% if not prefix is defined %}
+{% set prefix=env.deployment %}
+{% endif %}
+
+{% import "../utils/netcalc.jinja" as netcalc %}
 
 resources:
 - name: {{ properties.prefix }}-ext-ip
@@ -28,8 +32,8 @@ resources:
 - name: {{ properties.prefix }}-fgt1
   type: compute.v1.instance
   properties:
-    zone: {{ properties["zone1"]}}
-    machineType: zones/{{ properties["zone1"]}}/machineTypes/{{ properties["instanceType"]}}
+    zone: {{ properties.zone1 }}
+    machineType: zones/{{ properties.zone1 }}/machineTypes/{{ properties.instanceType }}
     disks:
     - deviceName: boot
       type: PERSISTENT
@@ -48,13 +52,16 @@ resources:
       autoDelete: true
       boot: false
     networkInterfaces:
-    - network: {{ properties.networks.data.vpc }}
-      subnetwork: {{ properties.networks.data.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.data.cidr, 1 ) }}
+    - network: {{ properties.networks.external.vpc }}
+      subnetwork: {{ properties.networks.external.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
         natIP: $(ref.{{ properties.prefix }}-ext-ip.address)
+    - network: {{ properties.networks.internal.vpc }}
+      subnetwork: {{ properties.networks.internal.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}    
     - network: {{ properties.networks.hasync.vpc }}
       subnetwork: {{ properties.networks.hasync.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 1 )}}
@@ -80,7 +87,7 @@ resources:
     {% endif %}
       items:
       - key: serial-port-enable
-        value: true
+        value: {{ properties.serialPortEnable }}
     {% if properties.license.type == "byol" %}
       - key: license
         value: |
@@ -93,18 +100,26 @@ resources:
           end
           config system interface
             edit port1
-              set description data
+              set description external
               set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.data.cidr, 1 )}}
-              set allowaccess ping https ssh fgfm
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 1 )}}
+              set allowaccess ping
+              set role wan
             next
             edit port2
+              set description internal
+              set mode static
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 1 )}}
+              set allowaccess ping
+              set role lan
+            next
+            edit port3
               set description hasync
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.cidr, 1 )}}
               set allowaccess ping
             next
-            edit port3
+            edit port4
               set description mgmt
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.cidr, 1 )}}
@@ -114,12 +129,12 @@ resources:
           config system ha
             set group-name "cluster1"
             set mode a-p
-            set hbdev "port2" 50
+            set hbdev "port3" 50
             set session-pickup enable
             set ha-mgmt-status enable
             config ha-mgmt-interfaces
               edit 1
-              set interface "port3"
+              set interface "port4"
               set gateway {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 0 )}}
               next
             end
@@ -132,7 +147,25 @@ resources:
           config router static
             edit 1
               set device port1
-              set gateway {{ netcalc.getNthIp( properties.networks.data.cidr, 0 )}}
+              set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
+            next
+            edit 2
+              set dst 10.0.0.0/8
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 3
+              set dst 192.168.0.0/16
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 4
+              set dst 172.16.0.0/12
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
             next
           end
           config system sdn-connector
@@ -157,8 +190,8 @@ resources:
 - name: {{ properties.prefix}}-fgt2
   type: compute.v1.instance
   properties:
-    zone: {{ properties["zone2"]}}
-    machineType: zones/{{ properties["zone2"]}}/machineTypes/{{ properties["instanceType"]}}
+    zone: {{ properties.zone2 }}
+    machineType: zones/{{ properties.zone2 }}/machineTypes/{{ properties.instanceType }}
     disks:
     - deviceName: boot
       type: PERSISTENT
@@ -177,15 +210,18 @@ resources:
       autoDelete: true
       boot: false
     networkInterfaces:
-    - network: {{ properties.networks.data.vpc }}
-      subnetwork: {{ properties.networks.data.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.data.cidr, 2 )}}
+    - network: {{ properties.networks.external.vpc }}
+      subnetwork: {{ properties.networks.external.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 2 )}}
       {% if properties.license.type == "payg" %}
       accessConfigs:
       # needed for payg activation
       - name: Temporary External
         type: ONE_TO_ONE_NAT
       {% endif %}
+    - network: {{ properties.networks.internal.vpc }}
+      subnetwork: {{ properties.networks.internal.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 2 )}}
     - network: {{ properties.networks.hasync.vpc }}
       subnetwork: {{ properties.networks.hasync.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 2 )}}
@@ -219,18 +255,24 @@ resources:
           end
           config system interface
             edit port1
-              set description data
+              set description external
               set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.data.cidr, 2 )}}
-              set allowaccess ping https ssh fgfm
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 2 )}}
+              set allowaccess ping
             next
             edit port2
+              set description internal
+              set mode static
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 2 )}}
+              set allowaccess ping
+            next
+            edit port3
               set description hasync
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.cidr, 2 )}}
               set allowaccess ping
             next
-            edit port3
+            edit port4
               set description hamgmt
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.cidr, 2 )}}
@@ -239,19 +281,37 @@ resources:
           end
           config router static
             edit 1
-              set gateway {{ netcalc.getNthIp( properties.networks.data.cidr, 0 )}}
+              set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
               set device port1
             next
+            edit 2
+              set dst 10.0.0.0/8
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 3
+              set dst 192.168.0.0/16
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 4
+              set dst 172.16.0.0/12
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next            
           end
           config system ha
             set group-name "cluster1"
             set mode a-p
-            set hbdev "port2" 50
+            set hbdev "port3" 50
             set session-pickup enable
             set ha-mgmt-status enable
             config ha-mgmt-interfaces
               edit 1
-              set interface "port3"
+              set interface "port4"
               set gateway {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 0 )}}
               next
             end
@@ -279,10 +339,25 @@ resources:
       items:
        - {{properties.prefix}}-fgt
        - fgt
-- name: {{ properties.prefix}}-fgt-allow-in
+- name: {{ properties.prefix}}-allow-ingress-via-fgt
   type: compute.v1.firewall
   properties:
-    network: {{ properties.networks.data.vpc }}
+    network: {{ properties.networks.external.vpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{properties.prefix}}-fgt
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+    - IPProtocol: ESP
+    - IPProtocol: AH
+- name: {{ properties.prefix}}-allow-internal-via-fgt
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.networks.internal.vpc }}
     priority: 100
     sourceRanges:
     - 0.0.0.0/0
@@ -310,16 +385,18 @@ resources:
   properties:
     network: {{ properties.networks.hasync.vpc }}
     priority: 100
-    sourceRanges:
-    - 0.0.0.0/0
+    sourceTags:
+    - {{ properties.prefix }}-fgt
     targetTags:
     - {{ properties.prefix }}-fgt
     allowed:
     - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
 - name: {{ properties.prefix }}-fgt-route-direct
   type: compute.v1.route
   properties:
-    network: {{ properties.networks.data.vpc }}
+    network: {{ properties.networks.external.vpc }}
     destRange: 0.0.0.0/0
     nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
     priority: 10
@@ -328,13 +405,13 @@ resources:
 - name: {{ properties.prefix }}-default-via-fgt
   type: compute.v1.route
   properties:
-    network: {{ properties.networks.data.vpc }}
+    network: {{ properties.networks.internal.vpc }}
     destRange: 0.0.0.0/0
-    nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[0].networkIP)
+    nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[1].networkIP)
     priority: 100
 
 outputs:
 - name: FGT1-mgmt-ip
-  value: $(ref.{{ properties.prefix}}-fgt1.networkInterfaces[2])
+  value: $(ref.{{ properties.prefix}}-fgt1.networkInterfaces[3].accessConfigs[0].natIP)
 - name: FGT2-mgmt-ip
-  value: $(ref.{{ properties.prefix}}-fgt2.networkInterfaces[2])
+  value: $(ref.{{ properties.prefix}}-fgt2.networkInterfaces[3].accessConfigs[0].natIP)

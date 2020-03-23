@@ -2,10 +2,9 @@
 ### GCP Deployment Manager template
 
 # Introduction
-
-# Design
 GCP limitations related to deployment of multi-NIC instances make the [usual architecture](https://cloud.google.com/solutions/best-practices-vpc-design#multi-nic) for deploying firewalls very static and costly (a classic 3-tier application would require an 8-core FGT instances). Peered Security Hub architecture provides flexibility of securing up to 25 segments using standard VM04 instances.
 
+# Design
 Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC Networks to be inspected for traffic using peering. Default route defined in the Hub is propagated to the spokes using exportCustomRoutes/importCustomRoutes properties set on peerings (hub exports, spoke imports), thus enforcing traffic flow between spoke VPCs and from spokes to the Internet to be routed via firewalls.
 
 ![Peered Security Hub diagram](https://www.lucidchart.com/publicSegments/view/0d77291e-9bd6-4c71-a2cd-ba5a85de61bd/image.png)
@@ -24,9 +23,6 @@ Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC 
 - firewall rules to allow traffic to VPCs
 - firewall rule to allow HA communication between FGT instances
 
-
-### Note:
-Current version of the template deploys a single NIC for data path without splitting it to internal and external network. Modification of this design will follow soon.
 
 # Licensing
 This template supports both PAYG and BYOL licensing (with PAYG as default setting). To deploy a BYOL version, add a `license` property to your config file with following values:
