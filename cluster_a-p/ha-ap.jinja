@@ -100,16 +100,18 @@ resources:
           end
           config system interface
             edit port1
-              set description data
+              set description external
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 1 )}}
               set allowaccess ping
+              set role wan
             next
             edit port2
-              set description hasync
+              set description internal
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 1 )}}
               set allowaccess ping
+              set role lan
             next
             edit port3
               set description hasync
@@ -146,6 +148,24 @@ resources:
             edit 1
               set device port1
               set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
+            next
+            edit 2
+              set dst 10.0.0.0/8
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 3
+              set dst 192.168.0.0/16
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 4
+              set dst 172.16.0.0/12
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
             next
           end
           config system sdn-connector
@@ -264,6 +284,24 @@ resources:
               set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
               set device port1
             next
+            edit 2
+              set dst 10.0.0.0/8
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 3
+              set dst 192.168.0.0/16
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 4
+              set dst 172.16.0.0/12
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next            
           end
           config system ha
             set group-name "cluster1"
