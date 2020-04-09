@@ -41,11 +41,15 @@ This template set uses Google Cloud [Deployment Manager](https://cloud.google.co
 You can use any machine with gcloud cli tool installed to deploy the template (e.g. [Cloud Shell](https://cloud.google.com/shell/docs/using-cloud-shell)).
 
 1. Download the example configuration file to your deployment machine:
-```wget https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/config.yaml```
+```
+wget https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/config.yaml
+```
 1. Edit the properties section to reflect your desired architecture and licensing (see below section for details)
 1. If you're using BYOL licensing, copy the .lic files to same directory as your config.yaml file and refer the files in configuration
 1. Create the deployment base on your configuration:
-```gcloud deployment-manager deployments create [deployment name] --config config.yaml```
+```
+gcloud deployment-manager deployments create [deployment name] --config config.yaml
+```
 1. Succesfull deployment will finish with printing management IP addresses of both Fortigate instances. Connect to master to configure your admin password (by default Masters instance ID).
 
 ## Customizing the Deployment
@@ -69,5 +73,7 @@ An array describing all spoke networks to be created and peered with VPC. Check 
 ## Naming Convention
 By default all deployed resources are prefixed with the deployment name (e.g. my-deployment-fgt1, my-deployment-peering-spoke1-hub). To change the prefix, modify the prefix variable at the top of `fortigate-security-hub.jinja` template.
 
-## Post-deployment Steps
-No manual post-deployment steps are needed anymore. Import/export routes is fixed in this version
+# What next? Post-deployment Steps
+1. Connect to the Master Fortigate instance and set your administrator password. Wait for the cluster to come into full sync
+2. Connect to Slave Fortigate to make sure it is properly licensed and in sync. In case of HA sync problems, refer to [Fortinet documentation](https://kb.fortinet.com/kb/documentLink.do?externalID=FD36494)
+3. Remove public IP from nic0 of Slave instance. It was added for the sake of deploying PAYG licence, but will interfere with failing over the service Public IP during HA failover event.

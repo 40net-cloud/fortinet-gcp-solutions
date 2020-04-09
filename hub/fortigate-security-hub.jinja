@@ -1,7 +1,3 @@
-imports:
-- path: vpc.jinja
-- path: ha-ap.jinja
-
 {% import "../utils/fgtconfig.jinja" as fgtconfig %}
 
 {% if not prefix is defined %}
@@ -13,7 +9,7 @@ resources:
   type: vpc.jinja
   properties:
     prefix: {{ prefix }}
-    region: {{ properties["region"]}}
+    region: {{ properties.region }}
     hubNetworks: {{properties.hubNetworks }}
     spokeNetworks: {{ properties.spokeNetworks }}
 - name: Fortigate_Cluster
@@ -21,9 +17,9 @@ resources:
   properties:
     prefix: {{ prefix }}
     region: {{ properties.region }}
-    zone1: {{ properties["zone1"]}}
-    zone2: {{ properties["zone2"]}}
-    instanceType: {{ properties["fgtInstanceType"]}}
+    zone1: {{ properties.zone1 }}
+    zone2: {{ properties.zone2 }}
+    instanceType: {{ properties.fgtInstanceType }}
     serviceAccount: {{ properties.fgtServiceAccount }}
     license: {{ properties.license }}
     version: {{ properties.version }}

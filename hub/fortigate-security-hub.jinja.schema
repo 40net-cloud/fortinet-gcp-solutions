@@ -4,6 +4,8 @@ info:
 
 imports:
 - path: vpc.jinja
+- path: ../utils/netcalc.jinja
+- path: ../utils/fgtconfig.jinja
 
 properties:
   region:
