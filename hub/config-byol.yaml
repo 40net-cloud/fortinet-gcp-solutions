@@ -3,6 +3,10 @@ imports:
   name: fortigate-security-hub.jinja
 - path: https://raw.githubusercontent.com/bartekmo/forti-gcp/master/fortigate/ha-ap.jinja
   name: ha-ap.jinja
+- path: ../license1.lic
+  name: license1.lic
+- path: ../license2.lic
+  name: license2.lic
 
 resources:
 - name: SecurityHub
@@ -13,7 +17,9 @@ resources:
     zone2: europe-west1-c
     fgtInstanceType: e2-highcpu-4
     license:
-      type: payg
+      type: byol
+      lic1: license1.lic
+      lic2: license2.lic
     hubNetworks:
       internal:
         name: int

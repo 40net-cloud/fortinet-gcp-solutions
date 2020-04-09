@@ -33,8 +33,9 @@ license:
   lic1: path-to-license-file-for-master
   lic2: path-to-license-file-for-slave
 ```
+and add license files to configuration imports. See [config-byol.yaml](config-byol.yaml) for an example.
 
-For PAYG deployment use `type: payg` or simply fall back to the defaults.
+For PAYG deployment use `type: payg` or simply remove the `license:` definition to fall back to the defaults.
 
 # How to Deploy
 This template set uses Google Cloud [Deployment Manager](https://cloud.google.com/deployment-manager) to deploy all the resources.
