@@ -14,13 +14,13 @@
 {% import "../utils/netcalc.jinja" as netcalc %}
 
 resources:
-# TODO: loop for multiple pips
-- name: {{ properties.prefix }}-publicip-1
+{% for address in properties.publicIPs %}
+- name: {{ properties.prefix }}-{{ address.name }}
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
-# end todo
+{% endfor %}
 - name: {{ properties.prefix }}-fgt1-logdisk
   type: compute.v1.disk
   properties:
@@ -112,10 +112,12 @@ resources:
               unset allowaccess
               set secondary-IP enable
               config secondaryip
-                edit 1
-                set ip $(ref.{{ properties.prefix }}-publicip-1.address) 255.255.255.255
+{% for address in properties.publicIPs %}
+                edit {{ loop.index }}
+                set ip $(ref.{{ properties.prefix }}-{{ address.name }}.address) 255.255.255.255
                 set allowaccess probe-response
                 next
+{% endfor %}
               end
             next
             edit port2
@@ -261,6 +263,10 @@ resources:
           config system global
             set hostname "{{ properties.prefix }}-fgt2"
           end
+          config system probe-response
+            set mode http-probe
+            set http-probe-value OK
+          end
           config system interface
             edit port1
               set description external
@@ -269,10 +275,12 @@ resources:
               unset allowaccess
               set secondary-IP enable
               config secondaryip
-                edit 1
-                set ip $(ref.{{ properties.prefix }}-publicip-1.address) 255.255.255.255
+{% for address in properties.publicIPs %}
+                edit {{ loop.index }}
+                set ip $(ref.{{ properties.prefix }}-{{ address.name }}.address) 255.255.255.255
                 set allowaccess probe-response
                 next
+{% endfor %}
               end
             next
             edit port2
@@ -438,24 +446,26 @@ resources:
     - $(ref.{{ properties.prefix}}-fgt1.selfLink)
     - $(ref.{{ properties.prefix}}-fgt2.selfLink)
     sessionAffinity: NONE
-- name: {{ properties.prefix }}-tcpfwd-pip-1
+{% for address in properties.publicIPs %}
+- name: {{ properties.prefix }}-tcpfwd-{{ address.name }}
   type: compute.v1.forwardingRule
   properties:
     region: {{ properties.region }}
-    IPAddress: $(ref.{{ properties.prefix }}-publicip-1.selfLink)
+    IPAddress: $(ref.{{ properties.prefix }}-{{ address.name }}.selfLink)
     IPProtocol: TCP
     portRange: 1-65535
     target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
     loadBalancingScheme: EXTERNAL
-- name: {{ properties.prefix }}-udpfwd-pip-1
+- name: {{ properties.prefix }}-udpfwd-{{ address.name }}
   type: compute.v1.forwardingRule
   properties:
     region: {{ properties.region }}
-    IPAddress: $(ref.{{ properties.prefix }}-publicip-1.selfLink)
+    IPAddress: $(ref.{{ properties.prefix }}-{{ address.name }}.selfLink)
     IPProtocol: UDP
     portRange: 1-65535
     target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
     loadBalancingScheme: EXTERNAL
+{% endfor %}
 
 
 

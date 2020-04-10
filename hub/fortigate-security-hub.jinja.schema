@@ -30,6 +30,11 @@ properties:
   version:
     type: string
     default: "6.2.3"
+  publicIPs:
+    type: array
+    description: Array of names for public IPs to be connected. Used only with fortigate ELB deployments
+    default:
+    - name: ext-ip
   hubNetworks:
     type: object
     description: Description of Hub networks. Precise content depends on Fortigate (cluster) to be deployed. HA A-P requires internal, external, hasync and mgmt properties.

@@ -42,6 +42,7 @@ resources:
         vpc: $(ref.HubVPC.mgmtVpcRef)
         subnet: $(ref.HubVPC.mgmtSubnetRef)
         cidr: {{ properties.hubNetworks.mgmt.ipCidrRange }}
+    publicIPs: {{ properties.publicIPs }}
 
 outputs:
 - name: Management_IP

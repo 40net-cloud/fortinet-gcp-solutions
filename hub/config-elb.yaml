@@ -40,6 +40,9 @@ resources:
       ipCidrRange: 192.168.2.0/24
     - name: db
       ipCidrRange: 192.168.3.0/24
+    publicIPs:
+    - name: pip1
+    - name: pip2
 
 outputs:
   - name: Management_IP

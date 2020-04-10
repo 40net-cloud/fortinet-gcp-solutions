@@ -49,3 +49,8 @@ properties:
     type: boolean
     description: Enable or disable serial port for instances
     default: true
+  publicIPs:
+    type: array
+    description: Array of names for public IPs to be connected. Used only with fortigate ELB deployments
+    default:
+    - name: ext-ip
