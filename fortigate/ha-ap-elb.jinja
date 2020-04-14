@@ -21,6 +21,11 @@ resources:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
 {% endfor %}
+- name: {{ properties.prefix }}-ext-ip
+  type: compute.v1.address
+  properties:
+    region: {{ properties.region }}
+    description: Floating public IP for FGT used for outbound traffic and for HA SDN Connector
 - name: {{ properties.prefix }}-fgt1-logdisk
   type: compute.v1.disk
   properties:
@@ -58,8 +63,9 @@ resources:
       subnetwork: {{ properties.networks.external.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
       accessConfigs:
-      - name: Temporary - remove after license activation
+      - name: External NAT
         type: ONE_TO_ONE_NAT
+        natIP: $(ref.{{ properties.prefix }}-ext-ip.address)
     - network: {{ properties.networks.internal.vpc }}
       subnetwork: {{ properties.networks.internal.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
@@ -186,6 +192,10 @@ resources:
             edit "gcp_conn"
             set type gcp
             set ha-status enable
+            config external-ip
+              edit "{{ properties.prefix }}-ext-ip"
+              next
+            end
             config route
               edit "{{ properties.prefix }}-default-via-fgt"
               next
@@ -348,6 +358,10 @@ resources:
             edit "gcp_conn"
             set type gcp
             set ha-status enable
+            config external-ip
+              edit "{{ properties.prefix }}-ext-ip"
+              next
+            end            
             config route
               edit "{{ properties.prefix }}-default-via-fgt"
               next
@@ -412,7 +426,7 @@ resources:
     - IPProtocol: TCP
     - IPProtocol: UDP
     - IPProtocol: ICMP
-- name: {{ properties.prefix }}-fgt-route-direct
+- name: {{ properties.prefix }}-fgt-route-out
   type: compute.v1.route
   properties:
     network: {{ properties.networks.external.vpc }}
@@ -466,7 +480,6 @@ resources:
     target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
     loadBalancingScheme: EXTERNAL
 {% endfor %}
-
 
 
 outputs:
