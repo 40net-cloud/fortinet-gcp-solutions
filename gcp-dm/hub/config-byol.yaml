@@ -1,0 +1,46 @@
+imports:
+- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/fortigate-security-hub.jinja
+  name: fortigate-security-hub.jinja
+- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/master/fortigate/ha-ap.jinja
+  name: ha-ap.jinja
+- path: ../license1.lic
+  name: license1.lic
+- path: ../license2.lic
+  name: license2.lic
+
+resources:
+- name: SecurityHub
+  type: fortigate-security-hub.jinja
+  properties:
+    region: europe-west1
+    zone1: europe-west1-d
+    zone2: europe-west1-c
+    fgtInstanceType: e2-highcpu-4
+    license:
+      type: byol
+      lic1: license1.lic
+      lic2: license2.lic
+    hubNetworks:
+      internal:
+        name: int
+        ipCidrRange: 10.0.0.64/26
+      external:
+        name: ext
+        ipCidrRange: 10.0.0.0/26
+      hasync:
+        name: hasync
+        ipCidrRange: 10.0.0.128/26
+      mgmt:
+        name: mgmt
+        ipCidrRange: 10.0.0.192/26
+    spokeNetworks:
+    - name: frontend
+      ipCidrRange: 192.168.1.0/24
+    - name: backend
+      ipCidrRange: 192.168.2.0/24
+    - name: db
+      ipCidrRange: 192.168.3.0/24
+
+outputs:
+  - name: Management_IP
+    value: $(ref.SecurityHub.Management_IP)

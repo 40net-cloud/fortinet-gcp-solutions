@@ -1,0 +1,11 @@
+{% macro configSpokeAddresses(prefix, spokeNetworks) -%}
+config firewall address
+{%- for spoke in spokeNetworks %}
+  edit {{ prefix }}-{{ spoke.name }}
+    set type dynamic
+    set sdn "gcp_conn"
+    set filter "Network={{ prefix }}-{{ spoke.name }}"
+  next
+{%- endfor %}
+end
+{%- endmacro %}

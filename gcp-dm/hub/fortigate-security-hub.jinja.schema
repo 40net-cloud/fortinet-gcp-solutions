@@ -1,0 +1,56 @@
+info:
+  title: Security Hub VPC by Fortinet
+  version: 0.1
+
+imports:
+- path: vpc.jinja
+- path: ../utils/netcalc.jinja
+- path: ../utils/fgtconfig.jinja
+
+properties:
+  region:
+    type: string
+    description: Region to deploy to
+  zone1:
+    type: string
+    description: Zone for firewall 1
+  zone2:
+    type: string
+    description: Zone for firewall 2
+  fgtInstanceType:
+    type: string
+    default: n2-highcpu-4
+  fgtServiceAccount:
+    type: string
+    default: default
+  license:
+    type: object
+    default:
+      type: payg
+  version:
+    type: string
+    default: "6.2.3"
+  hubNetworks:
+    type: object
+    description: Description of Hub networks. Precise content depends on Fortigate (cluster) to be deployed. HA A-P requires internal, external, hasync and mgmt properties.
+    default:
+      internal:
+        name: int
+        ipCidrRange: 10.0.0.64/26
+      external:
+        name: ext
+        ipCidrRange: 10.0.0.0/26
+      hasync:
+        name: hasync
+        ipCidrRange: 10.0.0.128/26
+      mgmt:
+        name: mgmt
+        ipCidrRange: 10.0.0.192/26
+  spokeNetworks:
+    type: array
+    description: List of spoke network names and IP ranges. Note that final VPC and subnet name will be formed by adding a deployment name prefix.
+    default:
+     - name: frontend
+       ipCidrRange: 10.0.1.0/24
+     - name: backend
+       ipCidrRange: 10.0.2.0/24

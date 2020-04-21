@@ -1,0 +1,16 @@
+imports:
+- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/fortigate-security-hub.jinja
+  name: fortigate-security-hub.jinja
+- path: ttps://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/utils/netcalc.jinja
+  name: utils/netcalc.jinja
+- path: ttps://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/utils/fgtconfig.jinja
+  name: utils/fgtconfig.jinja
+
+resources:
+- name: SecurityHub
+  type: fortigate-security-hub.jinja
+  properties:
+    region: europe-west1
+    zone1: europe-west1-d
+    zone2: europe-west1-c
+    fgtInstanceType: e2-highcpu-4
