@@ -1,12 +1,9 @@
-# Active-Passive HA Fortigate cluster
-This template deploys a standard A-P HA cluster of 2 Fortigate instances.
+# Fortigate deployment models
+This directory contains several ways to deploy Fortigate appliance(s).
 
-![A-P HA Diagram](https://www.lucidchart.com/publicSegments/view/9fb2009b-32fa-4404-9009-4eb4529c988c/image.png)
+- Single VM
+- [Active-Passive HA Cluster (single Public IP)](ha-ap.md)
+- [Active-Passive with Load Balancer (multiple Public IPs)](ha-ap-elb.md)
 
-## Failover automation
-Deployed Fortigates integrate with GCP fabric using an SDN Connector. Upon failover 2 actions are performed:
-- named route is switched to the IP of the now active node
-- named external IP is re-assigned to the now active node
-
-## Dependencies
-This template uses helpers in utils directory.
+## Deployment
+All deployment modes are meant to be used with similar configurations (although simpler ones will ignore non-applicable parameters).
