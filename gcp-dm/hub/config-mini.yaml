@@ -1,10 +1,8 @@
 imports:
-- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/fortigate-security-hub.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/hub/fortigate-security-hub.jinja
   name: fortigate-security-hub.jinja
-- path: ttps://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/utils/netcalc.jinja
-  name: utils/netcalc.jinja
-- path: ttps://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/utils/fgtconfig.jinja
-  name: utils/fgtconfig.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/fortigate/ha-ap.jinja
+  name: ha-ap.jinja
 
 resources:
 - name: SecurityHub
@@ -13,4 +11,3 @@ resources:
     region: europe-west1
     zone1: europe-west1-d
     zone2: europe-west1-c
-    fgtInstanceType: e2-highcpu-4

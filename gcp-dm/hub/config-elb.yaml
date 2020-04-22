@@ -1,7 +1,7 @@
 imports:
-- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/multivip/hub/fortigate-security-hub.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/multivip/gcp-dm/hub/fortigate-security-hub.jinja
   name: fortigate-security-hub.jinja
-- path: https://raw.githubusercontent.com/bartekmo/forti-gcp/multivip/fortigate/ha-ap-elb.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/multivip/gcp-dm/fortigate/ha-ap-elb.jinja
   name: ha-ap.jinja
 - path: ../license1.lic
   name: license1.lic

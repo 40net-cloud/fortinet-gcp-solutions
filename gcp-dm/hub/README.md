@@ -9,6 +9,8 @@ Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC 
 
 ![Peered Security Hub diagram](https://www.lucidchart.com/publicSegments/view/0d77291e-9bd6-4c71-a2cd-ba5a85de61bd/image.png)
 
+Note that the Security Hub design focuses on the cloud architecture, while the Fortigate part is flexible - you can use any architecture available in this repository by changing the import path in your configuration file (compare [config.yaml](config.yaml) and [config-elb.yaml](config-elb.yaml))
+
 ## Deployed resources
 - 2 Fortigate VMs - clustered, with networking, GCP Connector and spoke network address objects preconfigured
 - 1 static public IP bound to port1 of fgt1 instance
@@ -43,7 +45,7 @@ You can use any machine with gcloud cli tool installed to deploy the template (e
 
 1. Download the example configuration file to your deployment machine:
 ```
-wget https://raw.githubusercontent.com/bartekmo/forti-gcp/master/hub/config.yaml
+wget https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/hub/config.yaml
 ```
 1. Edit the properties section to reflect your desired architecture and licensing (see below section for details)
 1. If you're using BYOL licensing, copy the .lic files to same directory as your config.yaml file and refer the files in configuration
@@ -70,6 +72,9 @@ An object describing 4 VPC Networks deployed as the hub (internal, external, has
 
 #### `spokeNetworks`
 An array describing all spoke networks to be created and peered with VPC. Check the example config.yaml for the format.
+
+#### Architecture
+You can deploy an HA cluster or HA cluster with ELB in this template. Just change the import section of the configuration file to reflect your desired architecture (compare import sections of [config.yaml](config.yaml) and [config-elb.yaml](config-elb.yaml) for more insight).
 
 ## Naming Convention
 By default all deployed resources are prefixed with the deployment name (e.g. my-deployment-fgt1, my-deployment-peering-spoke1-hub). To change the prefix, modify the prefix variable at the top of `fortigate-security-hub.jinja` template.
