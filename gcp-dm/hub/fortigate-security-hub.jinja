@@ -42,9 +42,12 @@ resources:
         vpc: $(ref.HubVPC.mgmtVpcRef)
         subnet: $(ref.HubVPC.mgmtSubnetRef)
         cidr: {{ properties.hubNetworks.mgmt.ipCidrRange }}
+    publicIPs: {{ properties.publicIPs }}
 
 outputs:
 - name: Management_IP
   value:
     Fortigate_A: $(ref.Fortigate_Cluster.FGT1-mgmt-ip)
     Fortigate_B: $(ref.Fortigate_Cluster.FGT2-mgmt-ip)
+- name: defaultPassword
+  value: $(ref.Fortigate_Cluster.defaultPassword)

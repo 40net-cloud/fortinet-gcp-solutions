@@ -14,11 +14,13 @@
 {% import "../utils/netcalc.jinja" as netcalc %}
 
 resources:
-- name: {{ properties.prefix }}-ext-ip
+{% for address in properties.publicIPs %}
+- name: {{ properties.prefix }}-{{ address.name }}
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
+{% endfor %}
 - name: {{ properties.prefix }}-fgt1-logdisk
   type: compute.v1.disk
   properties:
@@ -56,9 +58,8 @@ resources:
       subnetwork: {{ properties.networks.external.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
       accessConfigs:
-      - name: External NAT
+      - name: Temporary - remove after license activation
         type: ONE_TO_ONE_NAT
-        natIP: $(ref.{{ properties.prefix }}-ext-ip.address)
     - network: {{ properties.networks.internal.vpc }}
       subnetwork: {{ properties.networks.internal.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
@@ -98,13 +99,26 @@ resources:
           config system global
             set hostname "{{ properties.prefix }}-fgt1"
           end
+          config system probe-response
+            set mode http-probe
+            set http-probe-value OK
+          end
           config system interface
             edit port1
               set description external
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 1 )}}
-              set allowaccess ping
               set role wan
+              unset allowaccess
+              set secondary-IP enable
+              config secondaryip
+{% for address in properties.publicIPs %}
+                edit {{ loop.index }}
+                set ip $(ref.{{ properties.prefix }}-{{ address.name }}.address) 255.255.255.255
+                set allowaccess probe-response
+                next
+{% endfor %}
+              end
             next
             edit port2
               set description internal
@@ -172,10 +186,6 @@ resources:
             edit "gcp_conn"
             set type gcp
             set ha-status enable
-            config external-ip
-              edit "{{ properties.prefix }}-ext-ip"
-              next
-            end
             config route
               edit "{{ properties.prefix }}-default-via-fgt"
               next
@@ -253,12 +263,25 @@ resources:
           config system global
             set hostname "{{ properties.prefix }}-fgt2"
           end
+          config system probe-response
+            set mode http-probe
+            set http-probe-value OK
+          end
           config system interface
             edit port1
               set description external
               set mode static
               set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 2 )}}
-              set allowaccess ping
+              unset allowaccess
+              set secondary-IP enable
+              config secondaryip
+{% for address in properties.publicIPs %}
+                edit {{ loop.index }}
+                set ip $(ref.{{ properties.prefix }}-{{ address.name }}.address) 255.255.255.255
+                set allowaccess probe-response
+                next
+{% endfor %}
+              end
             next
             edit port2
               set description internal
@@ -325,10 +348,6 @@ resources:
             edit "gcp_conn"
             set type gcp
             set ha-status enable
-            config external-ip
-              edit "{{ properties.prefix }}-ext-ip"
-              next
-            end
             config route
               edit "{{ properties.prefix }}-default-via-fgt"
               next
@@ -393,7 +412,7 @@ resources:
     - IPProtocol: TCP
     - IPProtocol: UDP
     - IPProtocol: ICMP
-- name: {{ properties.prefix }}-fgt-route-direct
+- name: {{ properties.prefix }}-fgt-route-out
   type: compute.v1.route
   properties:
     network: {{ properties.networks.external.vpc }}
@@ -407,13 +426,110 @@ resources:
   properties:
     network: {{ properties.networks.internal.vpc }}
     destRange: 0.0.0.0/0
-    nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[1].networkIP)
+    nextHopIp: $(ref.{{ properties.prefix }}-internalgw-ip.address)
     priority: 100
+- name: {{ properties.prefix }}-ha-probe
+  type: compute.v1.httpHealthCheck
+  properties:
+    port: 8008
+    checkIntervalSec: 5
+    timeoutSec: 3
+    unhealthyThreshold: 2
+    healthyThreshold: 1
+- name: {{ properties.prefix }}-ha-pool
+  type: compute.v1.targetPool
+  properties:
+    region: {{ properties.region }}
+    healthChecks:
+    - $(ref.{{ properties.prefix }}-ha-probe.selfLink)
+    instances:
+    - $(ref.{{ properties.prefix}}-fgt1.selfLink)
+    - $(ref.{{ properties.prefix}}-fgt2.selfLink)
+    sessionAffinity: NONE
+{% for address in properties.publicIPs %}
+- name: {{ properties.prefix }}-tcpfwd-{{ address.name }}
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ properties.region }}
+    IPAddress: $(ref.{{ properties.prefix }}-{{ address.name }}.selfLink)
+    IPProtocol: TCP
+    portRange: 1-65535
+    target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
+    loadBalancingScheme: EXTERNAL
+- name: {{ properties.prefix }}-udpfwd-{{ address.name }}
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ properties.region }}
+    IPAddress: $(ref.{{ properties.prefix }}-{{ address.name }}.selfLink)
+    IPProtocol: UDP
+    portRange: 1-65535
+    target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
+    loadBalancingScheme: EXTERNAL
+{% endfor %}
+
+- name: {{ properties.prefix }}-internalgw-ip
+  type: compute.v1.address
+  properties:
+    region: {{ properties.region }}
+    addressType: INTERNAL
+    address: {{ netcalc.getNthIp( properties.networks.internal.cidr, 5 )}}
+    purpose: GCE_ENDPOINT
+    subnetwork: {{ properties.networks.internal.subnet }}
+- name: {{ properties.prefix }}-internalgw-fwd
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ properties.region }}
+    IPAddress: $(ref.{{ properties.prefix }}-internalgw-ip.address)
+    IPProtocol: TCP
+    portRange: 1-65535
+    loadBalancingScheme: INTERNAL
+    network: {{ properties.networks.internal.vpc }}
+    subnetwork: {{properties.networks.internal.subnet }}
+    backendService: $(ref.{{ properties.prefix }}-internalgw-pool.selfLink)
+- name: {{ properties.prefix }}-ha-grp1
+  type: compute.v1.instanceGroup
+  properties:
+    zone: {{ properties.zone1 }}
+- name: {{ properties.prefix }}-ha-grp1-add
+  action: gcp-types/compute-v1:compute.instanceGroups.addInstances
+  metadata:
+    runtimePolicy:
+    - CREATE
+  properties:
+    zone: {{ properties.zone1 }}
+    instanceGroup: $(ref.{{ properties.prefix }}-ha-grp1.name)
+    network: {{ properties.networks.internal.vpc }}
+    instances:
+    - instance: $(ref.{{ properties.prefix }}-fgt1.selfLink)
+- name: {{ properties.prefix }}-ha-grp2
+  type: compute.v1.instanceGroup
+  properties:
+    zone: {{ properties.zone2 }}
+    network: {{ properties.networks.internal.vpc }}
+- name: {{ properties.prefix }}-ha-grp2-add
+  action: gcp-types/compute-v1:compute.instanceGroups.addInstances
+  metadata:
+    runtimePolicy:
+    - CREATE
+  properties:
+    zone: {{ properties.zone2 }}
+    instanceGroup: $(ref.{{ properties.prefix }}-ha-grp2.name)
+    instances:
+    - instance: $(ref.{{ properties.prefix }}-fgt2.selfLink)
+- name: {{ properties.prefix }}-internalgw-pool
+  type: compute.v1.backendService
+  properties:
+    region: {{ properties.region }}
+    backends:
+    - group: $(ref.{{ properties.prefix }}-ha-grp1.selfLink)
+    - group: $(ref.{{ properties.prefix }}-ha-grp2.selfLink)
+    healthChecks:
+    - $(ref.{{ properties.prefix }}-ha-probe.selfLink)
 
 outputs:
 - name: FGT1-mgmt-ip
   value: $(ref.{{ properties.prefix}}-fgt1.networkInterfaces[3].accessConfigs[0].natIP)
 - name: FGT2-mgmt-ip
   value: $(ref.{{ properties.prefix}}-fgt2.networkInterfaces[3].accessConfigs[0].natIP)
-- name: Public_IP
-  value: $(ref.{{ properties.prefix }}-ext-ip.address)
+- name: defaultPassword
+  value: $(ref.{{ properties.prefix }}-fgt1.id)
