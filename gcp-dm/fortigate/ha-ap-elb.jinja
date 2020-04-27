@@ -6,6 +6,14 @@
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-623-20191223-001-w-license" %}
   {% endif %}
 {% endif %}
+{% if properties.version == "6.4.0" %}
+  {% if properties.license.type == "byol" %}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-640-20200401-001-w-license" %}
+  {% endif %}
+  {% if properties.license.type == "payg" %}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-640-20200401-001-w-license" %}
+  {% endif %}
+{% endif %}
 
 {% if not prefix is defined %}
 {% set prefix=env.deployment %}
@@ -361,7 +369,7 @@ resources:
             config external-ip
               edit "{{ properties.prefix }}-ext-ip"
               next
-            end            
+            end
             config route
               edit "{{ properties.prefix }}-default-via-fgt"
               next
