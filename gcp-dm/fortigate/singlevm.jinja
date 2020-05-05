@@ -1,0 +1,188 @@
+{% if not properties.prefix is defined %}
+{% set prefix=env.deployment %}
+{% else %}
+{% set prefix=properties.prefix %}
+{% endif %}
+
+{% import "../utils/netcalc.jinja" as netcalc %}
+{% import "../utils/images.jinja" as images %}
+
+{% set firmwareImage=images.getFgtImage( properties.version, properties.license.type ) %}
+
+{% if not properties.name is defined %}
+{% set fgname="fgt" %}
+{% else %}
+{% set fgname=properties.name %}
+{% endif %}
+
+{% set zone=properties.zone %}
+
+resources:
+- name: {{ prefix }}-ext-ip
+  type: compute.v1.address
+  properties:
+    region: {{ properties.region }}
+    description: Floating public IP for FGT cluster
+- name: {{ prefix }}-{{ fgname }}-logdisk
+  type: compute.v1.disk
+  properties:
+    zone: {{ zone }}
+    diskSizeGb: 30.0
+- name: {{ prefix }}-{{ fgname }}
+  type: compute.v1.instance
+  properties:
+    zone: {{ zone }}
+    machineType: zones/{{ zone }}/machineTypes/{{ properties.instanceType }}
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      guestOsFeatures:
+      - type: MULTI_IP_SUBNET
+      licenses:
+      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
+      initializeParams:
+        sourceImage: {{ firmwareImage }}
+        diskSizeGb: 10.0
+    - deviceName: {{ prefix }}-{{ fgname }}-logdisk
+      source: $(ref.{{ prefix }}-{{ fgname }}-logdisk.selfLink)
+      type: PERSISTENT
+      autoDelete: true
+      boot: false
+    networkInterfaces:
+    - network: {{ properties.networks.external.vpc }}
+      subnetwork: {{ properties.networks.external.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+        natIP: $(ref.{{ prefix }}-ext-ip.address)
+    - network: {{ properties.networks.internal.vpc }}
+      subnetwork: {{ properties.networks.internal.subnet }}
+      networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
+    canIpForward: Yes
+    serviceAccounts:
+    - email: {{ properties.serviceAccount }}
+      scopes:
+      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+      - 'https://www.googleapis.com/auth/logging.write'
+      - 'https://www.googleapis.com/auth/monitoring.write'
+      - 'https://www.googleapis.com/auth/compute'
+    metadata:
+      items:
+      - key: serial-port-enable
+        value: {{ properties.serialPortEnable }}
+    {% if properties.license.type == "byol" %}
+      - key: license
+        value: |
+          {{ imports[properties.license.lic] | indent(10) }}
+    {% endif %}
+      - key: user-data
+        value: |
+          config system global
+            set hostname "{{ prefix }}-{{ fgname }}"
+          end
+          config system interface
+            edit port1
+              set description external
+              set mode static
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 1 )}}
+              set allowaccess ping https ssh fgfm
+              set role wan
+            next
+            edit port2
+              set description internal
+              set mode static
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 1 )}}
+              set allowaccess ping
+              set role lan
+            next
+          end
+          config router static
+            edit 1
+              set device port1
+              set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
+            next
+            edit 2
+              set dst 10.0.0.0/8
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 3
+              set dst 192.168.0.0/16
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+            edit 4
+              set dst 172.16.0.0/12
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set distance 100
+            next
+          end
+          config system sdn-connector
+            edit "gcp_conn"
+            set type gcp
+          next
+          end
+          {{ properties.fwConfig | indent(10) }}
+    tags:
+      items:
+       - {{prefix}}-fgt
+       - fortigate
+
+- name: {{ prefix}}-allow-ingress-via-fgt
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.networks.external.vpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{prefix}}-fgt
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+    - IPProtocol: ESP
+    - IPProtocol: AH
+- name: {{ prefix}}-allow-internal-via-fgt
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.networks.internal.vpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{prefix}}-fgt
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+    - IPProtocol: ESP
+    - IPProtocol: AH
+- name: {{ prefix }}-fgt-route-direct
+  type: compute.v1.route
+  properties:
+    network: {{ properties.networks.external.vpc }}
+    destRange: 0.0.0.0/0
+    nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
+    priority: 10
+    tags:
+    - {{ prefix }}-fgt
+- name: {{ prefix }}-default-via-fgt
+  type: compute.v1.route
+  properties:
+    network: {{ properties.networks.internal.vpc }}
+    destRange: 0.0.0.0/0
+    nextHopIp: $(ref.{{ prefix }}-{{ fgname }}.networkInterfaces[1].networkIP)
+    priority: 100
+
+outputs:
+- name: Public_IP
+  value: $(ref.{{ prefix }}-ext-ip.address)
+- name: defaultPassword
+  value: $(ref.{{ prefix }}-{{ fgname }}.id)
