@@ -3,7 +3,13 @@ imports:
   name: singlevm.jinja
 
 resources:
-# first, let's prepare two networks...
+# let's start with our custom Public IP
+- name: custom-pip
+  type: compute.v1.address
+  properties:
+    networkTier: STANDARD
+    region: us-west1
+# now, let's prepare two networks...
 - name: protected-vpc
   type: compute.v1.network
   properties:
@@ -34,6 +40,9 @@ resources:
     region: us-west1
     zone: us-west1-b
     instanceType: e2-standard-2
+    externalIP:
+      address: $(ref.custom-pip.address)
+      networkTier: $(ref.custom-pip.networkTier)
     networks:
       internal:
         vpc: $(ref.protected-vpc.selfLink)

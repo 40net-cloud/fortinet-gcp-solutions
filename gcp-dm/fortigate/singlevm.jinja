@@ -4,6 +4,8 @@
 {% set prefix=properties.prefix %}
 {% endif %}
 
+{% set externalIpName="ext-ip" %}
+
 {% import "../utils/netcalc.jinja" as netcalc %}
 {% import "../utils/images.jinja" as images %}
 
@@ -18,11 +20,13 @@
 {% set zone=properties.zone %}
 
 resources:
-- name: {{ prefix }}-ext-ip
+{% if not properties.externalIP is defined %}
+- name: {{ prefix }}-{{ externalIpName }}
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
-    description: Floating public IP for FGT cluster
+    description: Public IP of Fortigate instance
+{% endif %}
 - name: {{ prefix }}-{{ fgname }}-logdisk
   type: compute.v1.disk
   properties:
@@ -57,7 +61,12 @@ resources:
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
-        natIP: $(ref.{{ prefix }}-ext-ip.address)
+        {% if properties.externalIP is defined %}
+        natIP: {{ properties.externalIP.address }}
+        networkTier: {{ properties.externalIP.networkTier }}
+        {% else %}
+        natIP: $(ref.{{ prefix }}-{{ externalIpName }}.address)
+        {% endif %}
     - network: {{ properties.networks.internal.vpc }}
       subnetwork: {{ properties.networks.internal.subnet }}
       networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
@@ -183,6 +192,10 @@ resources:
 
 outputs:
 - name: Public_IP
-  value: $(ref.{{ prefix }}-ext-ip.address)
+{% if properties.externalIP is defined %}
+  value: {{ properties.externalIP.address }}
+{% else %}
+  value: $(ref.{{ prefix }}-{{ externalIpName }}.address)
+{% endif %}
 - name: defaultPassword
   value: $(ref.{{ prefix }}-{{ fgname }}.id)

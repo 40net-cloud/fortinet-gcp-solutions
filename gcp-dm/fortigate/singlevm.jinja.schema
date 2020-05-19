@@ -17,7 +17,7 @@ properties:
     description: Prefix to be added to all resource names
   name:
     type: string
-    description: Name of the firewall instance (minus prefix)
+    description: (optional) Name of the firewall instance (minus prefix)
     default: fgt
   region:
     type: string
@@ -50,6 +50,9 @@ properties:
     type: boolean
     description: Enable or disable serial port for instances
     default: true
+  externalIP:
+    type: object
+    description: (optional) Address of existing Public IP to be used with the VM instead of automatically generated one
   fwConfig:
     type: string
     description: Additional configuration to be passed to the firewall

@@ -47,6 +47,7 @@ All templates in this directory share common properties (at least most of them).
 `serialPortEnable` | *boolean* | Enable/disable serial port console | true | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `publicIPs` | *array* | List of names of public IPs to be created | `- name: ext-ip` | :x: | :x: | :heavy_check_mark:
 `fwConfig` | *string* | Custom Fortigate configuration script to be executed during provisioning | | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
+`externalIP` | *object* | Object with .address and .networkTier properties with preexisting public IP to be attached to new Fortigate instance | :heavy_check_mark: | :x: | :x:
 
 ### license
 `license` property allows you to deploy either PAYG or BYOL Fortigate instances and provision licenses for BYOL during deployment.
