@@ -57,7 +57,9 @@ resources:
     networkInterfaces:
     - network: {{ properties.networks.external.vpc }}
       subnetwork: {{ properties.networks.external.subnet }}
+      {% if "cidr" in properties.networks.external.cidr %}
       networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
+      {% endif %}
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
@@ -69,7 +71,9 @@ resources:
         {% endif %}
     - network: {{ properties.networks.internal.vpc }}
       subnetwork: {{ properties.networks.internal.subnet }}
+      {% if "cidr" in properties.networks.internal.cidr %}
       networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
+      {% endif %}
     canIpForward: Yes
     serviceAccounts:
     - email: {{ properties.serviceAccount }}
@@ -92,6 +96,7 @@ resources:
           config system global
             set hostname "{{ prefix }}-{{ fgname }}"
           end
+          {% if "cidr" in properties.networks.internal %}
           config system interface
             edit port1
               set description external
@@ -132,6 +137,7 @@ resources:
               set distance 100
             next
           end
+          {% endif %}
           config system sdn-connector
             edit "gcp_conn"
             set type gcp
