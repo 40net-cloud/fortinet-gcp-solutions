@@ -47,11 +47,11 @@ resources:
       internal:
         vpc: $(ref.protected-vpc.selfLink)
         subnet: $(ref.protected-uswest1.selfLink)
-        cidr: 172.17.0.0/24
+        #ipCidrRange: 172.17.0.0/24
       external:
         vpc: $(ref.external-vpc.selfLink)
         subnet: $(ref.external-uswest1.selfLink)
-        cidr: 172.17.1.0/24
+        #ipCidrRange: 172.17.1.0/24
 
 # Note:
 # configuration and template files can also output values. Here you can see how

@@ -47,7 +47,8 @@ All templates in this directory share common properties (at least most of them).
 `serialPortEnable` | *boolean* | Enable/disable serial port console | true | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `publicIPs` | *array* | List of names of public IPs to be created | `- name: ext-ip` | :x: | :x: | :heavy_check_mark:
 `fwConfig` | *string* | Custom Fortigate configuration script to be executed during provisioning | | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
-`externalIP` | *object* | Object with .address and .networkTier properties with preexisting public IP to be attached to new Fortigate instance | :heavy_check_mark: | :x: | :x:
+`externalIP` | *object* | Object with .address and .networkTier properties with preexisting public IP to be attached to new Fortigate instance | | :heavy_check_mark: | :x: | :x:
+`attachPublicIP` | *boolean* | Set to false for deployments without directly attached public IP | true | :heavy_check_mark: | :x: | :x:
 
 ### license
 `license` property allows you to deploy either PAYG or BYOL Fortigate instances and provision licenses for BYOL during deployment.
@@ -89,7 +90,10 @@ lic2: forti2.lic
 Each network in `networks` object has following properties:
 - **vpc** - url of VPC Network
 - **subnet** - url of VPC Subnet
-- **cidr** - CIDR address of the subnet
+- **ipCidrRange** - [optional] CIDR address of the subnet
+- **networkIP** - [optional] instance IP address with mask (e.g. 192.168.0.2/24).
+
+NOTE: If **networkIP** is not set, first IP from ipCidrRange will be assigned as static IP. If **ipCidrRange** is not set, instance will use DHCP assignment. Long netmask (255.255.255.0) is NOT supported.
 
 #### Example of a complete object:
 ```yaml
@@ -97,19 +101,19 @@ networks:
   internal:
     vpc: projects/my-project-123/global/networks/int
     subnet: projects/my-project-123/regions/europe-west1/subnetworks/int-snet
-    cidr: 10.0.1.0/24
+    ipCidrRange: 10.0.1.0/24
   external:
     vpc: projects/my-project-123/global/networks/ext
     subnet: projects/my-project-123/regions/europe-west1/subnetworks/ext-snet
-    cidr: 10.0.2.0/24
+    ipCidrRange: 10.0.2.0/24
   hasync:
     vpc: projects/my-project-123/global/networks/hasync
     subnet: projects/my-project-123/regions/europe-west1/subnetworks/hasync-snet
-    cidr: 10.0.3.0/24
+    ipCidrRange: 10.0.3.0/24
   mgmt:
     vpc: projects/my-project-123/global/networks/mgmt
     subnet: projects/my-project-123/regions/europe-west1/subnetworks/mgmtsnet
-    cidr: 10.0.4.0/24
+    ipCidrRange: 10.0.4.0/24
 ```
 
 ## Examples

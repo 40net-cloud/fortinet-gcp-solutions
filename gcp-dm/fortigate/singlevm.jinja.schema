@@ -53,6 +53,10 @@ properties:
   externalIP:
     type: object
     description: (optional) Address of existing Public IP to be used with the VM instead of automatically generated one
+  attachPublicIP:
+    type: boolean
+    description: Set to false for deployments without directly attached public IP
+    default: true
   fwConfig:
     type: string
     description: Additional configuration to be passed to the firewall

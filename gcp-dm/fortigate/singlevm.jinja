@@ -20,7 +20,7 @@
 {% set zone=properties.zone %}
 
 resources:
-{% if not properties.externalIP is defined %}
+{% if (not properties.externalIP is defined) and (properties.attachPublicIP) %}
 - name: {{ prefix }}-{{ externalIpName }}
   type: compute.v1.address
   properties:
@@ -57,9 +57,12 @@ resources:
     networkInterfaces:
     - network: {{ properties.networks.external.vpc }}
       subnetwork: {{ properties.networks.external.subnet }}
-      {% if "cidr" in properties.networks.external.cidr %}
-      networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
+      {% if "networkIP" in properties.networks.external %}
+      networkIP: {{ properties.networks.external.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.external %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.external.ipCidrRange, 1 ) }}
       {% endif %}
+      {% if properties.attachPublicIP %}
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
@@ -69,11 +72,30 @@ resources:
         {% else %}
         natIP: $(ref.{{ prefix }}-{{ externalIpName }}.address)
         {% endif %}
+      {% endif %}
     - network: {{ properties.networks.internal.vpc }}
       subnetwork: {{ properties.networks.internal.subnet }}
-      {% if "cidr" in properties.networks.internal.cidr %}
-      networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
+      {% if "networkIP" in properties.networks.internal %}
+      networkIP: {{ properties.networks.internal.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.internal %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 1 )}}
       {% endif %}
+    {% if "hasync" in properties.networks and "mgmt" in properties.networks %}
+    - network: {{ properties.networks.hasync.vpc }}
+      subnetwork: {{ properties.networks.hasync.subnet }}
+      {% if "networkIP" in properties.networks.hasync %}
+      networkIP: {{ properties.networks.hasync.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.hasync %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.hasync.ipCidrRange, 1 )}}
+      {% endif %}
+    - network: {{ properties.networks.mgmt.vpc }}
+      subnetwork: {{ properties.networks.mgmt.subnet }}
+      {% if "networkIP" in properties.networks.mgmt %}
+      networkIP: {{ properties.networks.mgmt.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.mgmt %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.ipCidrRange, 1 )}}
+      {% endif %}
+    {% endif %}
     canIpForward: Yes
     serviceAccounts:
     - email: {{ properties.serviceAccount }}
@@ -96,48 +118,62 @@ resources:
           config system global
             set hostname "{{ prefix }}-{{ fgname }}"
           end
-          {% if "cidr" in properties.networks.internal %}
           config system interface
+          {%- if "ipCidrRange" in properties.networks.external or "networkIP" in properties.networks.external %}
             edit port1
               set description external
               set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 1 )}}
+              {%- if "networkIP" in properties.networks.external %}
+              set ip {{ properties.networks.external.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.ipCidrRange, 1 )}}
+              {%- endif %}
               set allowaccess ping https ssh fgfm
               set role wan
             next
+          {%- endif %}
+          {%- if "ipCidrRange" in properties.networks.internal or "networkIP" in properties.networks.internal %}
             edit port2
               set description internal
               set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 1 )}}
+              {%- if "networkIP" in properties.networks.internal %}
+              set ip {{ properties.networks.internal.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.ipCidrRange, 1 )}}
+              {%- endif %}
               set allowaccess ping
               set role lan
             next
+          {%- endif %}
           end
           config router static
+          {%- if "ipCidrRange" in properties.networks.external %}
             edit 1
               set device port1
-              set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
+              set gateway {{ netcalc.getNthIp( properties.networks.external.ipCidrRange, 0 )}}
             next
+          {%- endif %}
+          {%- if "ipCidrRange" in properties.networks.internal %}
             edit 2
               set dst 10.0.0.0/8
               set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
               set distance 100
             next
             edit 3
               set dst 192.168.0.0/16
               set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
               set distance 100
             next
             edit 4
               set dst 172.16.0.0/12
               set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
               set distance 100
             next
+          {%- endif %}
           end
-          {% endif %}
           config system sdn-connector
             edit "gcp_conn"
             set type gcp
@@ -149,7 +185,7 @@ resources:
        - {{prefix}}-fgt
        - fortigate
 
-- name: {{ prefix}}-allow-ingress-via-fgt
+- name: {{ prefix }}-allow-ingress-via-fgt
   type: compute.v1.firewall
   properties:
     network: {{ properties.networks.external.vpc }}
@@ -164,7 +200,7 @@ resources:
     - IPProtocol: ICMP
     - IPProtocol: ESP
     - IPProtocol: AH
-- name: {{ prefix}}-allow-internal-via-fgt
+- name: {{ prefix }}-allow-internal-via-fgt
   type: compute.v1.firewall
   properties:
     network: {{ properties.networks.internal.vpc }}
@@ -197,11 +233,13 @@ resources:
     priority: 100
 
 outputs:
+{% if properties.attachPublicIP %}
 - name: Public_IP
-{% if properties.externalIP is defined %}
+  {% if properties.externalIP is defined %}
   value: {{ properties.externalIP.address }}
-{% else %}
+  {% else %}
   value: $(ref.{{ prefix }}-{{ externalIpName }}.address)
+  {% endif %}
 {% endif %}
 - name: defaultPassword
   value: $(ref.{{ prefix }}-{{ fgname }}.id)

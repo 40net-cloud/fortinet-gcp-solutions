@@ -4,27 +4,27 @@ imports:
 
 resources:
 # first, let's prepare two networks...
-- name: protected-vpc
-  type: compute.v1.network
-  properties:
-    autoCreateSubnetworks: false
 - name: external-vpc
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: false
-# ...and some subnets
-- name: protected-uswest1
-  type: compute.v1.subnetwork
+- name: protected-vpc
+  type: compute.v1.network
   properties:
-    region: us-west1
-    network: $(ref.protected-vpc.selfLink)
-    ipCidrRange: 172.17.0.0/24
+    autoCreateSubnetworks: false
+# ...and some subnets
 - name: external-uswest1
   type: compute.v1.subnetwork
   properties:
     region: us-west1
     network: $(ref.external-vpc.selfLink)
     ipCidrRange: 172.17.1.0/24
+- name: protected-uswest1
+  type: compute.v1.subnetwork
+  properties:
+    region: us-west1
+    network: $(ref.protected-vpc.selfLink)
+    ipCidrRange: 172.17.0.0/24
 # Now it's time to deploy a Fortigate and protect the internalVpc
 # Note how you can skip some properties leaving them to default (e.g. licensing)
 # and declare only those you want to change (e.g. instanceType)
@@ -35,14 +35,16 @@ resources:
     zone: us-west1-b
     instanceType: e2-standard-2
     networks:
-      internal:
-        vpc: $(ref.protected-vpc.selfLink)
-        subnet: $(ref.protected-uswest1.selfLink)
-        cidr: 172.17.0.0/24
       external:
         vpc: $(ref.external-vpc.selfLink)
         subnet: $(ref.external-uswest1.selfLink)
-        cidr: 172.17.1.0/24
+        networkIP: 172.17.1.100/24
+        ipCidrRange: 172.17.1.0/24
+      internal:
+        vpc: $(ref.protected-vpc.selfLink)
+        subnet: $(ref.protected-uswest1.selfLink)
+        ipCidrRange: 172.17.0.0/24
+
 
 # Note:
 # configuration and template files can also output values. Here you can see how
