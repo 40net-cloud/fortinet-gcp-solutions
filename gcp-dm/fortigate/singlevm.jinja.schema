@@ -61,3 +61,9 @@ properties:
     type: string
     description: Additional configuration to be passed to the firewall
     default: ""
+  routes:
+    type: array
+    default:
+    - destRange: 0.0.0.0/0
+      name: default
+      priority: 100

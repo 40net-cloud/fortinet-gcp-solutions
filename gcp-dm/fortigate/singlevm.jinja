@@ -224,13 +224,15 @@ resources:
     priority: 10
     tags:
     - {{ prefix }}-fgt
-- name: {{ prefix }}-default-via-fgt
+{% for route in properties.routes %}
+- name: {{ prefix }}-{{ route.name | default( "route"~loop.index ) }}-via-fgt
   type: compute.v1.route
   properties:
     network: {{ properties.networks.internal.vpc }}
-    destRange: 0.0.0.0/0
+    destRange: {{ route.destRange }}
     nextHopIp: $(ref.{{ prefix }}-{{ fgname }}.networkInterfaces[1].networkIP)
-    priority: 100
+    priority: {{ route.priority | default(100) }}
+{% endfor %}
 
 outputs:
 {% if properties.attachPublicIP %}
