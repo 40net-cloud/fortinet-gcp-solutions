@@ -95,6 +95,9 @@ resources:
       {% elif "ipCidrRange" in properties.networks.mgmt %}
       networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.ipCidrRange, 1 )}}
       {% endif %}
+      accessConfigs:
+      - name: Management
+        type: ONE_TO_ONE_NAT
     {% endif %}
     canIpForward: Yes
     serviceAccounts:
@@ -145,6 +148,32 @@ resources:
               set role lan
             next
           {%- endif %}
+          {%- if "hasync" in properties.networks and "mgmt" in properties.networks %}
+            {%- if "ipCidrRange" in properties.networks.hasync or "networkIP" in properties.networks.hasync %}
+            edit port3
+              set description hasync
+              set mode static
+              {%- if "networkIP" in properties.networks.hasync %}
+              set ip {{ properties.networks.hasync.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.ipCidrRange, 1 )}}
+              {%- endif %}
+              set allowaccess ping
+            next
+            {%- endif %}
+            {%- if "ipCidrRange" in properties.networks.mgmt or "networkIP" in properties.networks.mgmt %}
+            edit port4
+              set description management
+              set mode static
+              {%- if "networkIP" in properties.networks.mgmt %}
+              set ip {{ properties.networks.mgmt.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.ipCidrRange, 1 )}}
+              {%- endif %}
+              set allowaccess ping https ssh fgfm
+            next
+            {%- endif %}
+          {%- endif %}
           end
           config router static
           {%- if "ipCidrRange" in properties.networks.external %}
@@ -185,7 +214,8 @@ resources:
        - {{prefix}}-fgt
        - fortigate
 
-- name: {{ prefix }}-allow-ingress-via-fgt
+{% if properties.createCloudFirewallRules %}
+- name: {{ prefix }}-allow-internet-to-fgt
   type: compute.v1.firewall
   properties:
     network: {{ properties.networks.external.vpc }}
@@ -200,15 +230,13 @@ resources:
     - IPProtocol: ICMP
     - IPProtocol: ESP
     - IPProtocol: AH
-- name: {{ prefix }}-allow-internal-via-fgt
+- name: {{ prefix }}-allow-all-internal
   type: compute.v1.firewall
   properties:
     network: {{ properties.networks.internal.vpc }}
-    priority: 100
+    priority: 200
     sourceRanges:
     - 0.0.0.0/0
-    targetTags:
-    - {{prefix}}-fgt
     allowed:
     - IPProtocol: TCP
     - IPProtocol: UDP
@@ -224,8 +252,10 @@ resources:
     priority: 10
     tags:
     - {{ prefix }}-fgt
+{% endif %}
 {% for route in properties.routes %}
 - name: {{ prefix }}-{{ route.name | default( "route"~loop.index ) }}-via-fgt
+{# NOTE: route naming scheme referred in ha-ap.jinja line 144 #}
   type: compute.v1.route
   properties:
     network: {{ properties.networks.internal.vpc }}

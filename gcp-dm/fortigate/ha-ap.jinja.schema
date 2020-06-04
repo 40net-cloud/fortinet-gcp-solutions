@@ -4,6 +4,7 @@ info:
 
 imports:
 - path: ../utils/netcalc.jinja
+- path: singlevm.jinja
 
 required:
 - zone1
@@ -48,3 +49,9 @@ properties:
     type: boolean
     description: Enable or disable serial port for instances
     default: true
+  routes:
+    type: array
+    default:
+    - destRange: 0.0.0.0/0
+      name: default
+      priority: 100

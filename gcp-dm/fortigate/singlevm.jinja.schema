@@ -67,3 +67,7 @@ properties:
     - destRange: 0.0.0.0/0
       name: default
       priority: 100
+  createCloudFirewallRules:
+    type: boolean
+    default: true
+    description: Can be used to skip creating cloud firewall rules and direct route (e.g. for HA slave instance)
