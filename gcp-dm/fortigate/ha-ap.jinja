@@ -104,13 +104,17 @@ resources:
       external:
         vpc: {{ properties.networks.external.vpc }}
         subnet: {{ properties.networks.external.subnet }}
+        {% if "ipCidrRange" in properties.networks.external %}
         ipCidrRange: {{ properties.networks.external.ipCidrRange }}
         networkIP: {{ netcalc.getNthIpWithMask( properties.networks.external.ipCidrRange, loop.index ) }}
+        {% endif %}
       internal:
         vpc: {{ properties.networks.internal.vpc }}
         subnet: {{ properties.networks.internal.subnet }}
+        {% if "ipCidrRange" in properties.networks.internal %}
         ipCidrRange: {{ properties.networks.internal.ipCidrRange }}
         networkIP: {{ netcalc.getNthIpWithMask( properties.networks.internal.ipCidrRange, loop.index ) }}
+        {% endif %}
       hasync:
         vpc: {{ hasyncVpc }}
         subnet: {{ hasyncSubnet }}
