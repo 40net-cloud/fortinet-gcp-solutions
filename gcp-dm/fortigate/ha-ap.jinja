@@ -11,6 +11,17 @@
 {% set defaultMgmtNetName="fgt-mgmt" %}
 {% set defaultExternalIpName="ext-ip" %}
 
+{% if "ipCidrRange" in properties.networks.hasync %}
+{% set hasyncCidrRange=properties.networks.hasync.ipCidrRange %}
+{% else %}
+{% set hasyncCidrRange=defaultHasyncRange %}
+{% endif %}
+{% if "ipCidrRange" in properties.networks.mgmt %}
+{% set mgmtCidrRange=properties.networks.mgmt.ipCidrRange %}
+{% else %}
+{% set mgmtCidrRange=defaultMgmtRange %}
+{% endif %}
+
 resources:
 {% if not "vpc" in properties.networks.hasync %}
 - name: {{ prefix }}-{{ defaultHasyncNetName }}
@@ -19,7 +30,7 @@ resources:
     autoCreateSubnetworks: false
 {% set hasyncVpc="$(ref."~prefix~"-"~defaultHasyncNetName~".selfLink)" %}
 {% else %}
-{% set hasyncVpc=properties.networks.mgmt.vpc %}
+{% set hasyncVpc=properties.networks.hasync.vpc %}
 {% endif %}
 {% if not "vpc" in properties.networks.mgmt %}
 - name: {{ prefix }}-{{ defaultMgmtNetName }}
@@ -36,11 +47,6 @@ resources:
   properties:
     region: {{ properties.region }}
     network: {{ hasyncVpc }}
-    {% if "ipCidrRange" in properties.networks.hasync %}
-    {% set hasyncCidrRange=properties.networks.hasync.ipCidrRange %}
-    {% else %}
-    {% set hasyncCidrRange=defaultHasyncRange %}
-    {% endif %}
     ipCidrRange: {{ hasyncCidrRange }}
   {% set hasyncSubnet="$(ref."~prefix~"-"~defaultHasyncNetName~"-subnet.selfLink)" %}
   {% else %}
@@ -52,11 +58,6 @@ resources:
   properties:
     region: {{ properties.region }}
     network: {{ mgmtVpc }}
-    {% if "ipCidrRange" in properties.networks.mgmt %}
-    {% set mgmtCidrRange=properties.networks.mgmt.ipCidrRange %}
-    {% else %}
-    {% set mgmtCidrRange=defaultMgmtRange %}
-    {% endif %}
     ipCidrRange: {{ mgmtCidrRange }}
   {% set mgmtSubnet="$(ref."~prefix~"-"~defaultMgmtNetName~"-subnet.selfLink)" %}
   {% else %}
@@ -89,6 +90,7 @@ resources:
     region: {{ properties.region }}
     zone: {{ properties.zones[ loop.index0 ]}}
     instanceType: {{ properties.instanceType }}
+    version: {{ properties.version }}
     name: fgt{{ loop.index }}
     {% if loop.index0==0 and properties.attachPublicIP %}
     externalIP:

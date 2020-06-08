@@ -12,7 +12,7 @@ resources:
     description: Floating public IP for FGT cluster
 {% endfor %}
 
-- name: Fortigate_Cluster
+- name: Fortigate_Cluster_Basic
   type: ha-ap.jinja
   properties:
     prefix: {{ prefix }}
@@ -63,8 +63,8 @@ resources:
     healthChecks:
     - $(ref.{{ prefix }}-ha-probe.selfLink)
     instances:
-    - $(ref.Fortigate_Cluster.fgt1Link)
-    - $(ref.Fortigate_Cluster.fgt2Link)
+    - $(ref.Fortigate_Cluster_Basic.fgt1Link)
+    - $(ref.Fortigate_Cluster_Basic.fgt2Link)
     sessionAffinity: NONE
 {% for address in properties.publicIPs %}
 - name: {{ prefix }}-tcpfwd-{{ address.name }}
@@ -90,11 +90,11 @@ resources:
 
 outputs:
 - name: FGT1-mgmt-ip
-  value: $(ref.Fortigate_Cluster.FGT1-mgmt-ip)
+  value: $(ref.Fortigate_Cluster_Basic.FGT1-mgmt-ip)
 - name: FGT2-mgmt-ip
-  value: $(ref.Fortigate_Cluster.FGT2-mgmt-ip)
+  value: $(ref.Fortigate_Cluster_Basic.FGT2-mgmt-ip)
 - name: defaultPassword
-  value: $(ref.Fortigate_Cluster.defaultPassword)
+  value: $(ref.Fortigate_Cluster_Basic.defaultPassword)
 - name: Inbound_Service_Addresses
   value:
   {%- for address in properties.publicIPs %}

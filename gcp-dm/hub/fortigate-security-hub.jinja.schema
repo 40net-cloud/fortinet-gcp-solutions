@@ -11,15 +11,12 @@ properties:
   region:
     type: string
     description: Region to deploy to
-  zone1:
-    type: string
-    description: Zone for firewall 1
-  zone2:
-    type: string
-    description: Zone for firewall 2
+  zones:
+    type: array
+    description: Zone for firewalls
   fgtInstanceType:
     type: string
-    default: n2-highcpu-4
+    default: e2-highcpu-4
   fgtServiceAccount:
     type: string
     default: default

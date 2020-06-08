@@ -51,16 +51,16 @@ resources:
   properties:
     autoCreateSubnetworks: no
 - name: {{ spoke.name}}-defaultRouteList
-  action: gcp-types/compute-v1:compute.routes.list  
+  action: gcp-types/compute-v1:compute.routes.list
   properties:
     filter: (destRange="0.0.0.0/0") AND (network="$(ref.{{ spokeVpcName }}.selfLink)")
 - name: {{ spoke.name }}-deleteDirectDefaultRoute
   action: gcp-types/compute-v1:compute.routes.delete
-  metadata: 
+  metadata:
     runtimePolicy:
     - CREATE
   properties:
-    route: $(ref.{{ spoke.name }}-defaultRouteList.items[0].name) 
+    route: $(ref.{{ spoke.name }}-defaultRouteList.items[0].name)
 - name: {{ properties.prefix }}-{{spoke.name}}-allow-all
   type: compute.v1.firewall
   properties:
@@ -79,7 +79,7 @@ resources:
     network: $(ref.{{ spokeVpcName }}.selfLink)
     ipCidrRange: {{ spoke.ipCidrRange }}
 - name: {{ properties.prefix }}-peering-{{ spoke.name }}-to-hub
-  type: gcp-types/compute-v1:compute.networks.addPeering
+  action: gcp-types/compute-v1:compute.networks.addPeering
   properties:
     network: {{ spokeVpcName }}
     networkPeering:
@@ -88,6 +88,8 @@ resources:
       exchangeSubnetRoutes: true
       importCustomRoutes: true
   metadata:
+    runtimePolicy:
+    - CREATE
     dependsOn:
     - {{ hubVpcName }}
     - {{ properties.prefix }}-default-via-fgt
@@ -97,7 +99,7 @@ resources:
     - {{ properties.prefix }}-peering-hub-to-{{ properties.spokeNetworks[loop.index0-1].name }}
     {% endif %}
 - name: {{ properties.prefix }}-peering-hub-to-{{ spoke.name }}
-  type: gcp-types/compute-v1:compute.networks.addPeering
+  action: gcp-types/compute-v1:compute.networks.addPeering
   properties:
     network: {{ hubVpcName }}
     networkPeering:
@@ -106,6 +108,8 @@ resources:
       exchangeSubnetRoutes: true
       exportCustomRoutes: true
   metadata:
+    runtimePolicy:
+    - CREATE
     dependsOn:
     - {{ properties.prefix }}-peering-{{ spoke.name }}-to-hub
 {% endfor %}

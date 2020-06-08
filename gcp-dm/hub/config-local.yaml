@@ -1,7 +1,7 @@
 imports:
 - path: fortigate-security-hub.jinja
 - path: ../fortigate/ha-ap-elb.jinja
-  name: ha-ap.jinja
+  name: fortigate.jinja
 - path: ../secrets/license1.lic
   name: license1.lic
 - path: ../secrets/license2.lic
@@ -16,7 +16,7 @@ resources:
     - europe-west1-d
     - europe-west1-c
     fgtInstanceType: e2-highcpu-4
-    version: 6.4.0
+    version: 6.2.3
     license:
       type: byol
       lics:
