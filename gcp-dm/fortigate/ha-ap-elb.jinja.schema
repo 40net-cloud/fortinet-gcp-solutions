@@ -5,10 +5,10 @@ info:
 
 imports:
 - path: ../utils/netcalc.jinja
+- path: ha-ap.jinja
 
 required:
-- zone1
-- zone2
+- zones
 - region
 - networks
 
@@ -28,10 +28,10 @@ properties:
   instanceType:
     type: string
     description: Instance size to be used for FGT deployment
-    default: n2-highcpu-4
+    default: e2-highcpu-4
   license:
     type: object
-    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include lic1 and lic2 properties pointing to the license files.
+    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include lics array pointing to the license files.
     default:
       type: payg
   version:
@@ -49,8 +49,18 @@ properties:
     type: boolean
     description: Enable or disable serial port for instances
     default: true
+  fwConfig:
+    type: string
+    description: Additional configuration to be passed to the firewall
+    default: ""
   publicIPs:
     type: array
     description: Array of names for public IPs to be connected. Used only with fortigate ELB deployments
     default:
     - name: ext-ip
+  routes:
+    type: array
+    default:
+    - destRange: 0.0.0.0/0
+      name: default
+      priority: 100

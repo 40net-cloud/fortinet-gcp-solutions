@@ -1,8 +1,6 @@
 {% import "../utils/fgtconfig.jinja" as fgtconfig %}
 
-{% if not prefix is defined %}
-{% set prefix=env.deployment %}
-{% endif %}
+{% set prefix = properties.prefix|default(env.deployment) %}
 
 resources:
 - name: HubVPC
@@ -17,8 +15,7 @@ resources:
   properties:
     prefix: {{ prefix }}
     region: {{ properties.region }}
-    zone1: {{ properties.zone1 }}
-    zone2: {{ properties.zone2 }}
+    zones: {{ properties.zones }}
     instanceType: {{ properties.fgtInstanceType }}
     serviceAccount: {{ properties.fgtServiceAccount }}
     license: {{ properties.license }}

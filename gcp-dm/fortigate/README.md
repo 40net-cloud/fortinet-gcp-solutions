@@ -37,8 +37,7 @@ All templates in this directory share common properties (at least most of them).
 `name` | *string* | Name of instance. For HA deployments hard-coded to fgt1, fgt2 | fgt | :heavy_check_mark: | :x: | :x:
 `region` | *string* | Region to deploy resources to | | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `zone` | *gce-zone* | Zone to deploy Fortigate to | | :heavy_check_mark: | :x: | :x: |
-`zone1` | *gce-zone* | Zone for fgt1 (Master Fortigate instance) | | :x: | :heavy_check_mark: | :heavy_check_mark:
-`zone2` | *gce-zone* | Zone for fgt2 (Slave Fortigate instance) | | :x: | :heavy_check_mark: | :heavy_check_mark:
+`zones` | *gce-zone[]* | Zones for Master and Slave instances | | :x: | :heavy_check_mark: | :heavy_check_mark:
 `instanceType` | *string* | Type of GCE instance to deploy | "e2-highcpu-4" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `license` | *object* | Description of Fortigate licensing. See [below](#license) for structure details | type: "payg" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `version` | *enum* | Firmware version to deploy. Currently supported 6.2.3 and 6.4.0 | "6.2.3" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
@@ -77,8 +76,9 @@ lic: forti1.lic
 HA deployments:
 ```yaml
 type: byol
-lic1: forti1.lic
-lic2: forti2.lic
+lics:
+- forti1.lic
+- forti2.lic
 ```
 
 ### networks

@@ -7,8 +7,7 @@ imports:
 - path: singlevm.jinja
 
 required:
-- zone1
-- zone2
+- zones
 - region
 - networks
 
@@ -19,19 +18,16 @@ properties:
   region:
     type: string
     description: Region to deploy to
-  zone1:
-    type: string
-    description: Availability zone name for master instance
-  zone2:
-    type: string
-    description: Availability zone name for slave instance
+  zones:
+    type: array
+    description: Availability zones names list
   instanceType:
     type: string
     description: Instance size to be used for FGT deployment
-    default: n2-highcpu-4
+    default: e2-highcpu-4
   license:
     type: object
-    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include lic1 and lic2 properties pointing to the license files.
+    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include lics array pointing to the license files.
     default:
       type: payg
   version:
@@ -49,6 +45,14 @@ properties:
     type: boolean
     description: Enable or disable serial port for instances
     default: true
+  attachPublicIP:
+    type: boolean
+    description: Set to false for deployments without directly attached public IP
+    default: true
+  fwConfig:
+    type: string
+    description: Additional configuration to be passed to the firewall
+    default: ""
   routes:
     type: array
     default:

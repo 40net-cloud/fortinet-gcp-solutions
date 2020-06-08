@@ -1,456 +1,54 @@
-{% if properties.version == "6.2.3" %}
-  {% if properties.license.type == "byol" %}
-  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-623-20191223-001-w-license" %}
-  {% endif %}
-  {% if properties.license.type == "payg" %}
-  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-623-20191223-001-w-license" %}
-  {% endif %}
-{% endif %}
-{% if properties.version == "6.4.0" %}
-  {% if properties.license.type == "byol" %}
-  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-640-20200401-001-w-license" %}
-  {% endif %}
-  {% if properties.license.type == "payg" %}
-  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-640-20200401-001-w-license" %}
-  {% endif %}
-{% endif %}
 
-{% if not prefix is defined %}
-{% set prefix=env.deployment %}
-{% endif %}
+{% set prefix = prefix|default(env.deployment) %}
 
 {% import "../utils/netcalc.jinja" as netcalc %}
 
 resources:
 {% for address in properties.publicIPs %}
-- name: {{ properties.prefix }}-{{ address.name }}
+- name: {{ prefix }}-{{ address.name }}
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
 {% endfor %}
-- name: {{ properties.prefix }}-ext-ip
-  type: compute.v1.address
+
+- name: Fortigate_Cluster
+  type: ha-ap.jinja
   properties:
+    prefix: {{ prefix }}
     region: {{ properties.region }}
-    description: Floating public IP for FGT used for outbound traffic and for HA SDN Connector
-- name: {{ properties.prefix }}-fgt1-logdisk
-  type: compute.v1.disk
-  properties:
-    zone: {{ properties.zone1 }}
-    diskSizeGb: 30.0
-- name: {{ properties.prefix }}-fgt2-logdisk
-  type: compute.v1.disk
-  properties:
-    zone: {{ properties.zone2 }}
-    diskSizeGb: 30.0
-- name: {{ properties.prefix }}-fgt1
-  type: compute.v1.instance
-  properties:
-    zone: {{ properties.zone1 }}
-    machineType: zones/{{ properties.zone1 }}/machineTypes/{{ properties.instanceType }}
-    disks:
-    - deviceName: boot
-      type: PERSISTENT
-      boot: true
-      autoDelete: true
-      guestOsFeatures:
-      - type: MULTI_IP_SUBNET
-      licenses:
-      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
-      initializeParams:
-        sourceImage: {{ firmwareImage }}
-        diskSizeGb: 10.0
-    - deviceName: {{ properties.prefix }}-fgt1-logdisk
-      source: $(ref.{{ properties.prefix }}-fgt1-logdisk.selfLink)
-      type: PERSISTENT
-      autoDelete: true
-      boot: false
-    networkInterfaces:
-    - network: {{ properties.networks.external.vpc }}
-      subnetwork: {{ properties.networks.external.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 1 ) }}
-      accessConfigs:
-      - name: External NAT
-        type: ONE_TO_ONE_NAT
-        natIP: $(ref.{{ properties.prefix }}-ext-ip.address)
-    - network: {{ properties.networks.internal.vpc }}
-      subnetwork: {{ properties.networks.internal.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 1 )}}
-    - network: {{ properties.networks.hasync.vpc }}
-      subnetwork: {{ properties.networks.hasync.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 1 )}}
-    - network: {{ properties.networks.mgmt.vpc }}
-      subnetwork: {{ properties.networks.mgmt.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 1 )}}
-      accessConfigs:
-      - name: Mgmt A
-        type: ONE_TO_ONE_NAT
-    canIpForward: Yes
-    serviceAccounts:
-    - email: {{ properties.serviceAccount }}
-      scopes:
-      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
-      - 'https://www.googleapis.com/auth/logging.write'
-      - 'https://www.googleapis.com/auth/monitoring.write'
-      - 'https://www.googleapis.com/auth/compute'
-    metadata:
-    {% if properties.license.type == "payg" %}
-      # give secondary time to verify PAYG license
-      dependsOn:
-      - {{ properties.prefix}}-fgt2
-    {% endif %}
-      items:
-      - key: serial-port-enable
-        value: {{ properties.serialPortEnable }}
-    {% if properties.license.type == "byol" %}
-      - key: license
-        value: |
-          {{ imports[properties.license.lic1] | indent(10) }}
-    {% endif %}
-      - key: user-data
-        value: |
-          config system global
-            set hostname "{{ properties.prefix }}-fgt1"
+    zones: {{ properties.zones }}
+    instanceType: {{ properties.instanceType }}
+    license: {{ properties.license }}
+    version: {{ properties.version }}
+    networks: {{ properties. networks }}
+    serviceAccount: {{ properties.serviceAccount }}
+    serialPortEnable: {{ properties.serialPortEnable }}
+    attachPublicIP: false
+    routes: {{ properties.routes }}
+    fwConfig: |
+      config system probe-response
+        set mode http-probe
+        set http-probe-value OK
+      end
+      config system interface
+        edit port1
+          unset allowaccess
+          set secondary-IP enable
+          config secondaryip
+  {%- for address in properties.publicIPs %}
+            edit {{ loop.index }}
+            set ip $(ref.{{ prefix }}-{{ address.name }}.address) 255.255.255.255
+            set allowaccess probe-response
+            next
+  {%- endfor %}
           end
-          config system probe-response
-            set mode http-probe
-            set http-probe-value OK
-          end
-          config system interface
-            edit port1
-              set description external
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 1 )}}
-              set role wan
-              unset allowaccess
-              set secondary-IP enable
-              config secondaryip
-{% for address in properties.publicIPs %}
-                edit {{ loop.index }}
-                set ip $(ref.{{ properties.prefix }}-{{ address.name }}.address) 255.255.255.255
-                set allowaccess probe-response
-                next
-{% endfor %}
-              end
-            next
-            edit port2
-              set description internal
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 1 )}}
-              set allowaccess ping
-              set role lan
-            next
-            edit port3
-              set description hasync
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.cidr, 1 )}}
-              set allowaccess ping
-            next
-            edit port4
-              set description mgmt
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.cidr, 1 )}}
-              set allowaccess ping https ssh fgfm
-            next
-          end
-          config system ha
-            set group-name "cluster1"
-            set mode a-p
-            set hbdev "port3" 50
-            set session-pickup enable
-            set ha-mgmt-status enable
-            config ha-mgmt-interfaces
-              edit 1
-              set interface "port4"
-              set gateway {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 0 )}}
-              next
-            end
-            set override disable
-            set priority 200
-            set unicast-hb enable
-            set unicast-hb-peerip {{ netcalc.getNthIp( properties.networks.hasync.cidr, 2 )}}
-            set unicast-hb-netmask {{ netcalc.getNetmaskLong( properties.networks.hasync.cidr )}}
-          end
-          config router static
-            edit 1
-              set device port1
-              set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
-            next
-            edit 2
-              set dst 10.0.0.0/8
-              set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
-              set distance 100
-            next
-            edit 3
-              set dst 192.168.0.0/16
-              set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
-              set distance 100
-            next
-            edit 4
-              set dst 172.16.0.0/12
-              set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
-              set distance 100
-            next
-          end
-          config system sdn-connector
-            edit "gcp_conn"
-            set type gcp
-            set ha-status enable
-            config external-ip
-              edit "{{ properties.prefix }}-ext-ip"
-              next
-            end
-            config route
-              edit "{{ properties.prefix }}-default-via-fgt"
-              next
-            end
-          next
-          end
-          {{ properties.fwConfig | indent(10) }}
-    tags:
-      items:
-       - {{properties.prefix}}-fgt
-       - fgt
-- name: {{ properties.prefix}}-fgt2
-  type: compute.v1.instance
-  properties:
-    zone: {{ properties.zone2 }}
-    machineType: zones/{{ properties.zone2 }}/machineTypes/{{ properties.instanceType }}
-    disks:
-    - deviceName: boot
-      type: PERSISTENT
-      boot: true
-      autoDelete: true
-      guestOsFeatures:
-      - type: MULTI_IP_SUBNET
-      licenses:
-      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
-      initializeParams:
-        sourceImage: {{ firmwareImage }}
-        diskSizeGb: 10.0
-    - deviceName: {{ properties.prefix }}-fgt2-logdisk
-      source: $(ref.{{ properties.prefix }}-fgt2-logdisk.selfLink)
-      type: PERSISTENT
-      autoDelete: true
-      boot: false
-    networkInterfaces:
-    - network: {{ properties.networks.external.vpc }}
-      subnetwork: {{ properties.networks.external.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.external.cidr, 2 )}}
-      {% if properties.license.type == "payg" %}
-      accessConfigs:
-      # needed for payg activation
-      - name: Temporary External
-        type: ONE_TO_ONE_NAT
-      {% endif %}
-    - network: {{ properties.networks.internal.vpc }}
-      subnetwork: {{ properties.networks.internal.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.internal.cidr, 2 )}}
-    - network: {{ properties.networks.hasync.vpc }}
-      subnetwork: {{ properties.networks.hasync.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.hasync.cidr, 2 )}}
-    - network: {{ properties.networks.mgmt.vpc }}
-      subnetwork: {{ properties.networks.mgmt.subnet }}
-      networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 2 )}}
-      accessConfigs:
-      - name: MGMT B
-        type: ONE_TO_ONE_NAT
-    canIpForward: Yes
-    serviceAccounts:
-    - email: {{ properties.serviceAccount }}
-      scopes:
-      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
-      - 'https://www.googleapis.com/auth/logging.write'
-      - 'https://www.googleapis.com/auth/monitoring.write'
-      - 'https://www.googleapis.com/auth/compute'
-    metadata:
-      items:
-      - key: serial-port-enable
-        value: true
-      {% if properties.license.type == "byol" %}
-      - key: license
-        value: |
-          {{ imports[properties.license.lic2] | indent(10) }}
-      {% endif %}
-      - key: user-data
-        value: |
-          config system global
-            set hostname "{{ properties.prefix }}-fgt2"
-          end
-          config system probe-response
-            set mode http-probe
-            set http-probe-value OK
-          end
-          config system interface
-            edit port1
-              set description external
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.cidr, 2 )}}
-              unset allowaccess
-              set secondary-IP enable
-              config secondaryip
-{% for address in properties.publicIPs %}
-                edit {{ loop.index }}
-                set ip $(ref.{{ properties.prefix }}-{{ address.name }}.address) 255.255.255.255
-                set allowaccess probe-response
-                next
-{% endfor %}
-              end
-            next
-            edit port2
-              set description internal
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.cidr, 2 )}}
-              set allowaccess ping
-            next
-            edit port3
-              set description hasync
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.cidr, 2 )}}
-              set allowaccess ping
-            next
-            edit port4
-              set description hamgmt
-              set mode static
-              set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.cidr, 2 )}}
-              set allowaccess ping https ssh fgfm
-            next
-          end
-          config router static
-            edit 1
-              set gateway {{ netcalc.getNthIp( properties.networks.external.cidr, 0 )}}
-              set device port1
-            next
-            edit 2
-              set dst 10.0.0.0/8
-              set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
-              set distance 100
-            next
-            edit 3
-              set dst 192.168.0.0/16
-              set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
-              set distance 100
-            next
-            edit 4
-              set dst 172.16.0.0/12
-              set device port2
-              set gateway {{ netcalc.getNthIp( properties.networks.internal.cidr, 0 )}}
-              set distance 100
-            next
-          end
-          config system ha
-            set group-name "cluster1"
-            set mode a-p
-            set hbdev "port3" 50
-            set session-pickup enable
-            set ha-mgmt-status enable
-            config ha-mgmt-interfaces
-              edit 1
-              set interface "port4"
-              set gateway {{ netcalc.getNthIp( properties.networks.mgmt.cidr, 0 )}}
-              next
-            end
-            set override disable
-            set priority 100
-            set unicast-hb enable
-            set unicast-hb-peerip {{ netcalc.getNthIp( properties.networks.hasync.cidr, 1 )}}
-            set unicast-hb-netmask {{ netcalc.getNetmaskLong( properties.networks.hasync.cidr )}}
-          end
-          config system sdn-connector
-            edit "gcp_conn"
-            set type gcp
-            set ha-status enable
-            config external-ip
-              edit "{{ properties.prefix }}-ext-ip"
-              next
-            end
-            config route
-              edit "{{ properties.prefix }}-default-via-fgt"
-              next
-            end
-            next
-          end
-    tags:
-      items:
-       - {{properties.prefix}}-fgt
-       - fgt
-- name: {{ properties.prefix}}-allow-ingress-via-fgt
-  type: compute.v1.firewall
-  properties:
-    network: {{ properties.networks.external.vpc }}
-    priority: 100
-    sourceRanges:
-    - 0.0.0.0/0
-    targetTags:
-    - {{properties.prefix}}-fgt
-    allowed:
-    - IPProtocol: TCP
-    - IPProtocol: UDP
-    - IPProtocol: ICMP
-    - IPProtocol: ESP
-    - IPProtocol: AH
-- name: {{ properties.prefix}}-allow-internal-via-fgt
-  type: compute.v1.firewall
-  properties:
-    network: {{ properties.networks.internal.vpc }}
-    priority: 100
-    sourceRanges:
-    - 0.0.0.0/0
-    targetTags:
-    - {{properties.prefix}}-fgt
-    allowed:
-    - IPProtocol: TCP
-    - IPProtocol: UDP
-    - IPProtocol: ICMP
-    - IPProtocol: ESP
-    - IPProtocol: AH
-- name: {{ properties.prefix}}-fgt-allow-mgmt
-  type: compute.v1.firewall
-  properties:
-    network: {{ properties.networks.mgmt.vpc }}
-    priority: 100
-    sourceRanges:
-    - 0.0.0.0/0
-    targetTags:
-    - {{properties.prefix}}-fgt
-    allowed:
-    - IPProtocol: TCP
-- name: {{ properties.prefix }}-fgt-allow-ha
-  type: compute.v1.firewall
-  properties:
-    network: {{ properties.networks.hasync.vpc }}
-    priority: 100
-    sourceTags:
-    - {{ properties.prefix }}-fgt
-    targetTags:
-    - {{ properties.prefix }}-fgt
-    allowed:
-    - IPProtocol: TCP
-    - IPProtocol: UDP
-    - IPProtocol: ICMP
-- name: {{ properties.prefix }}-fgt-route-out
-  type: compute.v1.route
-  properties:
-    network: {{ properties.networks.external.vpc }}
-    destRange: 0.0.0.0/0
-    nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
-    priority: 10
-    tags:
-    - {{ properties.prefix }}-fgt
-- name: {{ properties.prefix }}-default-via-fgt
-  type: compute.v1.route
-  properties:
-    network: {{ properties.networks.internal.vpc }}
-    destRange: 0.0.0.0/0
-    nextHopIp: $(ref.{{ properties.prefix }}-fgt1.networkInterfaces[1].networkIP)
-    priority: 100
-- name: {{ properties.prefix }}-ha-probe
+        next
+      end
+      {{ properties.fwConfig | indent(6) }}
+
+
+- name: {{ prefix }}-ha-probe
   type: compute.v1.httpHealthCheck
   properties:
     port: 8008
@@ -458,42 +56,47 @@ resources:
     timeoutSec: 3
     unhealthyThreshold: 2
     healthyThreshold: 1
-- name: {{ properties.prefix }}-ha-pool
+- name: {{ prefix }}-ha-pool
   type: compute.v1.targetPool
   properties:
     region: {{ properties.region }}
     healthChecks:
-    - $(ref.{{ properties.prefix }}-ha-probe.selfLink)
+    - $(ref.{{ prefix }}-ha-probe.selfLink)
     instances:
-    - $(ref.{{ properties.prefix}}-fgt1.selfLink)
-    - $(ref.{{ properties.prefix}}-fgt2.selfLink)
+    - $(ref.Fortigate_Cluster.fgt1Link)
+    - $(ref.Fortigate_Cluster.fgt2Link)
     sessionAffinity: NONE
 {% for address in properties.publicIPs %}
-- name: {{ properties.prefix }}-tcpfwd-{{ address.name }}
+- name: {{ prefix }}-tcpfwd-{{ address.name }}
   type: compute.v1.forwardingRule
   properties:
     region: {{ properties.region }}
-    IPAddress: $(ref.{{ properties.prefix }}-{{ address.name }}.selfLink)
+    IPAddress: $(ref.{{ prefix }}-{{ address.name }}.selfLink)
     IPProtocol: TCP
     portRange: 1-65535
-    target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
+    target: $(ref.{{ prefix }}-ha-pool.selfLink)
     loadBalancingScheme: EXTERNAL
-- name: {{ properties.prefix }}-udpfwd-{{ address.name }}
+- name: {{ prefix }}-udpfwd-{{ address.name }}
   type: compute.v1.forwardingRule
   properties:
     region: {{ properties.region }}
-    IPAddress: $(ref.{{ properties.prefix }}-{{ address.name }}.selfLink)
+    IPAddress: $(ref.{{ prefix }}-{{ address.name }}.selfLink)
     IPProtocol: UDP
     portRange: 1-65535
-    target: $(ref.{{ properties.prefix }}-ha-pool.selfLink)
+    target: $(ref.{{ prefix }}-ha-pool.selfLink)
     loadBalancingScheme: EXTERNAL
 {% endfor %}
 
 
 outputs:
 - name: FGT1-mgmt-ip
-  value: $(ref.{{ properties.prefix}}-fgt1.networkInterfaces[3].accessConfigs[0].natIP)
+  value: $(ref.Fortigate_Cluster.FGT1-mgmt-ip)
 - name: FGT2-mgmt-ip
-  value: $(ref.{{ properties.prefix}}-fgt2.networkInterfaces[3].accessConfigs[0].natIP)
+  value: $(ref.Fortigate_Cluster.FGT2-mgmt-ip)
 - name: defaultPassword
-  value: $(ref.{{ properties.prefix }}-fgt1.id)
+  value: $(ref.Fortigate_Cluster.defaultPassword)
+- name: Inbound_Service_Addresses
+  value:
+  {%- for address in properties.publicIPs %}
+  - {{address.name}}: $(ref.{{ prefix }}-{{ address.name }}.address)
+  {% endfor %}

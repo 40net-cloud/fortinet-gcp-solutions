@@ -74,11 +74,13 @@ resources:
       sourceSubnetworkIpRangesToNat: ALL_SUBNETWORKS_ALL_IP_RANGES
       natIpAllocateOption: AUTO_ONLY
 
+{% if properties.attachPublicIP %}
 - name: {{ prefix }}-{{ defaultExternalIpName }}
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
     description: Floating public IP for FGT cluster
+{% endif %}
 
 {% for instance in ["Master_FGT", "Slave_FGT"] %}
 - name: {{ instance }}
@@ -88,7 +90,7 @@ resources:
     zone: {{ properties.zones[ loop.index0 ]}}
     instanceType: {{ properties.instanceType }}
     name: fgt{{ loop.index }}
-    {% if loop.index0==0 %}
+    {% if loop.index0==0 and properties.attachPublicIP %}
     externalIP:
       address: $(ref.{{ prefix }}-{{ defaultExternalIpName }}.address )
       networkTier: $(ref.{{ prefix }}-{{ defaultExternalIpName }}.networkTier )
@@ -155,10 +157,12 @@ resources:
         edit "gcp_conn"
         set type gcp
         set ha-status enable
+        {%- if properties.attachPublicIP %}
         config external-ip
           edit "{{ prefix }}-{{ defaultExternalIpName }}"
           next
         end
+        {%- endif %}
         config route
         {%- for route in properties.routes %}
           edit "{{ prefix }}-{{ route.name | default( "route"~loop.index )}}-via-fgt"
@@ -172,6 +176,7 @@ resources:
         set allowaccess ping
         next
       end
+      {{ properties.fwConfig | indent(6) }}
 {% endfor %}
 
 - name: {{ prefix }}-fgt-allow-hasync
@@ -199,17 +204,19 @@ resources:
     allowed:
     - IPProtocol: TCP
 
-{#
-TODO:
-
-#}
 
 outputs:
 - name: FGT1-mgmt-ip
   value: $(ref.{{ prefix}}-fgt1.networkInterfaces[3].accessConfigs[0].natIP)
 - name: FGT2-mgmt-ip
   value: $(ref.{{ prefix}}-fgt2.networkInterfaces[3].accessConfigs[0].natIP)
+{% if properties.attachPublicIP %}
 - name: Public_IP
   value: $(ref.{{ prefix }}-ext-ip.address)
+{% endif %}
 - name: defaultPassword
   value: $(ref.{{ prefix }}-fgt1.id)
+- name: fgt1Link
+  value: $(ref.{{ prefix }}-fgt1.selfLink )
+- name: fgt2Link
+  value: $(ref.{{ prefix }}-fgt2.selfLink )
