@@ -87,6 +87,7 @@ resources:
 - name: {{ instance }}
   type: singlevm.jinja
   properties:
+    prefix: {{ prefix }}
     region: {{ properties.region }}
     zone: {{ properties.zones[ loop.index0 ]}}
     instanceType: {{ properties.instanceType }}
