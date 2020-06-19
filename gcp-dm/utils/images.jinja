@@ -15,5 +15,13 @@
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-640-20200401-001-w-license" -%}
   {% endif -%}
 {% endif -%}
+{% if version == "6.4.1" -%}
+  {% if licenseType == "byol" -%}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-641-20200610-001-w-license" -%}
+  {% endif -%}
+  {% if licenseType == "payg" -%}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-641-20200610-001-w-license" -%}
+  {% endif -%}
+{% endif -%}
 {{ firmwareImage }}
 {%- endmacro %}
