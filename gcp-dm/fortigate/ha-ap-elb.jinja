@@ -9,7 +9,7 @@ resources:
   type: compute.v1.address
   properties:
     region: {{ properties.region }}
-    description: Floating public IP for FGT cluster
+    description: Public IP for FGT cluster
 {% endfor %}
 
 - name: Fortigate_Cluster_Basic
@@ -24,7 +24,9 @@ resources:
     networks: {{ properties. networks }}
     serviceAccount: {{ properties.serviceAccount }}
     serialPortEnable: {{ properties.serialPortEnable }}
+    {% if properties.version=="6.4.1"%}
     attachPublicIP: false
+    {% endif %}
     routes: {{ properties.routes }}
     fwConfig: |
       config system probe-response
