@@ -261,7 +261,9 @@ resources:
     network: {{ properties.networks.internal.vpc }}
     destRange: {{ route.destRange }}
     nextHopIp: $(ref.{{ prefix }}-{{ fgname }}.networkInterfaces[1].networkIP)
-    priority: {{ route.priority | default(100) }}
+    priority: {{ route.priority | default(1000) }}
+    tags: {{ route.tags | default([])}}
+    description: {{ route.description | default("")}}
 {% endfor %}
 
 outputs:
