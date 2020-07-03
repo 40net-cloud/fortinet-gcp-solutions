@@ -12,36 +12,33 @@ imports:
 
 resources:
 # first, let's prepare two networks...
-- name: bm-protected-vpc
+- name: protected-vpc
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: false
-- name: bm-external-vpc
+- name: external-vpc
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: false
 # ...and some subnets
-- name: bm-protected-uswest1
+- name: protected-uswest1
   type: compute.v1.subnetwork
   properties:
     region: us-west1
-    network: $(ref.bm-protected-vpc.selfLink)
+    network: $(ref.protected-vpc.selfLink)
     ipCidrRange: 172.17.0.0/24
-- name: bm-external-uswest1
+- name: external-uswest1
   type: compute.v1.subnetwork
   properties:
     region: us-west1
-    network: $(ref.bm-external-vpc.selfLink)
+    network: $(ref.external-vpc.selfLink)
     ipCidrRange: 172.17.1.0/24
+    
 # Now it's time to deploy a Fortigates and protect the internalVpc
-# Note how you can skip some properties leaving them to default (e.g. licensing)
-# and declare only those you want to change (e.g. instanceType).
-# Mind the version 6.2 requires additionally a public IP attached directly to the instance
-# this requirement is taken care of in the ha-ap-elb.jinja
 - name: fortigate-cluster
   type: ha-ap-elbilb.jinja
   properties:
-    prefix: bm-hatest2
+    prefix: fgt-ha-lb
     region: us-west1
     zones:
     - us-west1-b
@@ -55,16 +52,16 @@ resources:
     version: 6.4.1
     networks:
       internal:
-        vpc: $(ref.bm-protected-vpc.selfLink)
-        subnet: $(ref.bm-protected-uswest1.selfLink)
+        vpc: $(ref.protected-vpc.selfLink)
+        subnet: $(ref.protected-uswest1.selfLink)
         ipCidrRange: 172.17.0.0/24
       external:
-        vpc: $(ref.bm-external-vpc.selfLink)
-        subnet: $(ref.bm-external-uswest1.selfLink)
+        vpc: $(ref.external-vpc.selfLink)
+        subnet: $(ref.external-uswest1.selfLink)
         ipCidrRange: 172.17.1.0/24
     publicIPs:
-    - name: bm-app1
-    - name: bm-app2
+    - name: app1
+    - name: app2
 
 # Note:
 # configuration and template files can also output values. Here you can see how
