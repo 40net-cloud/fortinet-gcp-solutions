@@ -22,6 +22,7 @@ resources:
     version: {{ properties.version }}
     fwConfig: |
       {{ fgtconfig.configSpokeAddresses( prefix, properties.spokeNetworks )|indent(6) }}
+      {{ properties.fwConfig |indent(6) }}
     networks:
       internal:
         vpc: $(ref.HubVPC.hubVpcRef)
