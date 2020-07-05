@@ -17,7 +17,11 @@
 {% set fgname=properties.name %}
 {% endif %}
 
+{% if properties.zone is defined %}
 {% set zone=properties.zone %}
+{% else %}
+{% set zone=properties.zones[0] %}
+{% endif %}
 
 resources:
 {% if (not properties.externalIP is defined) and (properties.attachPublicIP) %}
@@ -114,7 +118,11 @@ resources:
     {% if properties.license.type == "byol" %}
       - key: license
         value: |
+          {%- if properties.license.lic is defined %}
           {{ imports[properties.license.lic] | indent(10) }}
+          {%- else %}
+          {{ imports[properties.license.lics[0]] | indent(10) }}
+          {%- endif %}
     {% endif %}
       - key: user-data
         value: |
@@ -254,8 +262,8 @@ resources:
     - {{ prefix }}-fgt
 {% endif %}
 {% for route in properties.routes %}
-- name: {{ prefix }}-{{ route.name | default( "route"~loop.index ) }}-via-fgt
-{# NOTE: route naming scheme referred in ha-ap.jinja line 144 #}
+- name: {{ prefix }}-{{ route.name | default( "route"~loop.index~"-via-fgt" ) }}
+{# NOTE: route naming scheme referred in ha-ap.jinja line 171 #}
   type: compute.v1.route
   properties:
     network: {{ properties.networks.internal.vpc }}
@@ -263,7 +271,7 @@ resources:
     nextHopIp: $(ref.{{ prefix }}-{{ fgname }}.networkInterfaces[1].networkIP)
     priority: {{ route.priority | default(1000) }}
     tags: {{ route.tags | default([])}}
-    description: {{ route.description | default("")}}
+    description: {{ route.description | default("route via FGT") }}
 {% endfor %}
 
 outputs:
