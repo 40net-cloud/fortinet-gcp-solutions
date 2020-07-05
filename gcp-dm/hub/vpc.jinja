@@ -46,10 +46,19 @@ resources:
     ipCidrRange: {{properties.hubNetworks.mgmt.ipCidrRange}}
 {% for spoke in properties.spokeNetworks %}
 {% set spokeVpcName = properties.prefix ~ '-' ~ spoke.name %}
+{% if "vpc" in spoke %}
+{% set spokeVpcName=spoke.vpc %}
+{% else %}
 - name: {{ spokeVpcName }}
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: no
+- name: {{ spokeVpcName }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    region: {{properties.region }}
+    network: $(ref.{{ spokeVpcName }}.selfLink)
+    ipCidrRange: {{ spoke.ipCidrRange }}
 - name: {{ spoke.name}}-defaultRouteList
   action: gcp-types/compute-v1:compute.routes.list
   properties:
@@ -61,10 +70,16 @@ resources:
     - CREATE
   properties:
     route: $(ref.{{ spoke.name }}-defaultRouteList.items[0].name)
+{% endif %}
+
 - name: {{ properties.prefix }}-{{spoke.name}}-allow-all
   type: compute.v1.firewall
   properties:
+  {% if "vpc" in spoke %}
+    network: {{ spoke.vpc }}
+  {% else %}
     network: $(ref.{{spokeVpcName}}.selfLink)
+  {% endif %}
     priority: 100
     sourceRanges:
     - 0.0.0.0/0
@@ -72,16 +87,10 @@ resources:
     - IPProtocol: TCP
     - IPProtocol: UDP
     - IPProtocol: ICMP
-- name: {{ spokeVpcName }}-subnet
-  type: compute.v1.subnetwork
-  properties:
-    region: {{properties.region }}
-    network: $(ref.{{ spokeVpcName }}.selfLink)
-    ipCidrRange: {{ spoke.ipCidrRange }}
 - name: {{ properties.prefix }}-peering-{{ spoke.name }}-to-hub
   action: gcp-types/compute-v1:compute.networks.addPeering
   properties:
-    network: {{ spokeVpcName }}
+    network: {{ spokeVpcName.split('/') | last }}
     networkPeering:
       name: {{ properties.prefix }}-peering-{{ spoke.name }}-to-hub
       network: $(ref.{{ hubVpcName }}.selfLink)
@@ -93,8 +102,10 @@ resources:
     dependsOn:
     - {{ hubVpcName }}
     - {{ properties.prefix }}-default-via-fgt
+    {% if not "vpc" in spoke %}
     - {{ spokeVpcName }}
     - {{ spoke.name }}-deleteDirectDefaultRoute
+    {% endif %}
     {% if not loop.first %}
     - {{ properties.prefix }}-peering-hub-to-{{ properties.spokeNetworks[loop.index0-1].name }}
     {% endif %}
@@ -104,7 +115,11 @@ resources:
     network: {{ hubVpcName }}
     networkPeering:
       name: {{ properties.prefix }}-peering-hub-to-{{ spoke.name }}
-      network: $(ref.{{ spokeVpcName }}.selfLink)
+    {% if "vpc" in spoke %}
+      network: {{ spoke.vpc }}
+    {% else %}
+      network: $(ref.{{spokeVpcName}}.selfLink)
+    {% endif %}
       exchangeSubnetRoutes: true
       exportCustomRoutes: true
   metadata:
