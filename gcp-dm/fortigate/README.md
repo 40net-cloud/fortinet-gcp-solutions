@@ -3,7 +3,7 @@ This directory contains several ways to deploy Fortigate appliance(s).
 
 - [Single VM](singlevm.md)
 - [Active-Passive HA Cluster (single Public IP)](ha-ap.md)
-- [Active-Passive with Load Balancer (multiple Public IPs)](ha-ap-elb.md)
+- [Active-Passive HA in Load Balancer Sandwich (multiple Public IPs)](ha-ap-elbilb.md)
 
 ## How to Deploy
 All templates are written for [GCP Deployment Manager](https://cloud.google.com/deployment-manager). DM templates can be deployed using [`gcloud`](https://cloud.google.com/sdk) command-line tool available for local downloads and in your [cloud shell](https://cloud.google.com/shell/docs/using-cloud-shell).
