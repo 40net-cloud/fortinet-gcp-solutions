@@ -6,7 +6,7 @@ This template deploys 2 Fortigate instances in an HA cluster between two load ba
 
 ## Deployed Resources
 - 2 Fortigate VM instances with 4 NICs each
-- 4 VPC Networks (unless provided)
+- 2 VPC Networks: heartbeat and management (unless provided)
 - External Load Balancer
     - External addresses
     - Target pool
