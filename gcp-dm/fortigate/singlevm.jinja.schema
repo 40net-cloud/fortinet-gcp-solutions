@@ -1,14 +1,13 @@
 info:
-  title: Fortigate High Availability Active-Passive cluster with ELB
-  description: Enables use of multiple VIPs
+  title: Single Fortigate VM
   version: 0.9
 
 imports:
 - path: ../utils/netcalc.jinja
-- path: ha-ap.jinja
+- path: ../utils/images.jinja
 
 required:
-- zones
+- zone
 - region
 - networks
 
@@ -16,27 +15,29 @@ properties:
   prefix:
     type: string
     description: Prefix to be added to all resource names
+  name:
+    type: string
+    description: (optional) Name of the firewall instance (minus prefix)
+    default: fgt
   region:
     type: string
     description: Region to deploy to
-  zone1:
+  zone:
     type: string
     description: Availability zone name for master instance
-  zone2:
-    type: string
-    description: Availability zone name for slave instance
+    metadata: gce-zone
   instanceType:
     type: string
     description: Instance size to be used for FGT deployment
     default: e2-highcpu-4
   license:
     type: object
-    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include lics array pointing to the license files.
+    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include licproperty pointing to the license files.
     default:
       type: payg
   version:
     type: string
-    description: Firmware version to deploy. Currently only 6.2.3 is supported
+    description: Firmware version to deploy. Currently only 6.2.3 and 6.4.0 are supported
     default: 6.2.3
   networks:
     type: object
@@ -49,18 +50,24 @@ properties:
     type: boolean
     description: Enable or disable serial port for instances
     default: true
+  externalIP:
+    type: object
+    description: (optional) Address of existing Public IP to be used with the VM instead of automatically generated one
+  attachPublicIP:
+    type: boolean
+    description: Set to false for deployments without directly attached public IP
+    default: true
   fwConfig:
     type: string
     description: Additional configuration to be passed to the firewall
     default: ""
-  publicIPs:
-    type: array
-    description: Array of names for public IPs to be connected. Used only with fortigate ELB deployments
-    default:
-    - name: ext-ip
   routes:
     type: array
     default:
     - destRange: 0.0.0.0/0
       name: default
       priority: 100
+  createCloudFirewallRules:
+    type: boolean
+    default: true
+    description: Can be used to skip creating cloud firewall rules and direct route (e.g. for HA slave instance)

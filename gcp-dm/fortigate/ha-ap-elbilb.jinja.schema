@@ -1,6 +1,6 @@
 info:
-  title: Fortigate High Availability Active-Passive cluster with ELB
-  description: Enables use of multiple VIPs
+  title: Fortigate ELB/ILB HA Active-Passive cluster
+  description: Fortigate High Availability Active-Passive cluster in ELB/ILB sandwich
   version: 0.9
 
 imports:
@@ -36,8 +36,8 @@ properties:
       type: payg
   version:
     type: string
-    description: Firmware version to deploy. Currently only 6.2.3 is supported
-    default: 6.2.3
+    description: Firmware version to deploy.
+    default: 6.4.1
   networks:
     type: object
     description: Indicate VPC Networks and subnets to be used (internal, external, hasync, mgmt). Each network need references to vpc and subnet (vpc and subnet properties) as well as cidr defined.
@@ -62,5 +62,5 @@ properties:
     type: array
     default:
     - destRange: 0.0.0.0/0
-      name: default
+      name: ilb-route-default
       priority: 100

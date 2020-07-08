@@ -1,8 +1,6 @@
 {% import "../utils/fgtconfig.jinja" as fgtconfig %}
 
-{% if not prefix is defined %}
-{% set prefix=env.deployment %}
-{% endif %}
+{% set prefix = properties.prefix|default(env.deployment) %}
 
 resources:
 - name: HubVPC
@@ -13,36 +11,40 @@ resources:
     hubNetworks: {{properties.hubNetworks }}
     spokeNetworks: {{ properties.spokeNetworks }}
 - name: Fortigate_Cluster
-  type: ha-ap.jinja
+  type: fortigate.jinja
   properties:
     prefix: {{ prefix }}
     region: {{ properties.region }}
-    zone1: {{ properties.zone1 }}
-    zone2: {{ properties.zone2 }}
+    zones: {{ properties.zones }}
     instanceType: {{ properties.fgtInstanceType }}
     serviceAccount: {{ properties.fgtServiceAccount }}
     license: {{ properties.license }}
     version: {{ properties.version }}
     fwConfig: |
       {{ fgtconfig.configSpokeAddresses( prefix, properties.spokeNetworks )|indent(6) }}
+      {{ properties.fwConfig |indent(6) }}
     networks:
       internal:
         vpc: $(ref.HubVPC.hubVpcRef)
         subnet: $(ref.HubVPC.hubSubnetRef)
-        cidr: {{ properties.hubNetworks.internal.ipCidrRange }}
+        ipCidrRange: {{ properties.hubNetworks.internal.ipCidrRange }}
       external:
         vpc: $(ref.HubVPC.extVpcRef)
         subnet: $(ref.HubVPC.extSubnetRef)
-        cidr: {{ properties.hubNetworks.external.ipCidrRange }}
+        ipCidrRange: {{ properties.hubNetworks.external.ipCidrRange }}
       hasync:
         vpc: $(ref.HubVPC.haVpcRef)
         subnet: $(ref.HubVPC.haSubnetRef)
-        cidr: {{ properties.hubNetworks.hasync.ipCidrRange }}
+        ipCidrRange: {{ properties.hubNetworks.hasync.ipCidrRange }}
       mgmt:
         vpc: $(ref.HubVPC.mgmtVpcRef)
         subnet: $(ref.HubVPC.mgmtSubnetRef)
-        cidr: {{ properties.hubNetworks.mgmt.ipCidrRange }}
+        ipCidrRange: {{ properties.hubNetworks.mgmt.ipCidrRange }}
     publicIPs: {{ properties.publicIPs }}
+    routes:
+    - destRange: 0.0.0.0/0
+      name: default-via-fgt
+      priority: 100
 
 outputs:
 - name: Management_IP

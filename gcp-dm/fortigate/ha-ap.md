@@ -9,7 +9,7 @@ Deployed Fortigates integrate with GCP fabric using an SDN Connector. Upon failo
 - named external IP is re-assigned to the now active node
 
 ## Dependencies
-This template uses helpers in utils directory.
+This template uses [singlevm.jinja](singlevm.md) template and helpers in utils directory.
 
 ## See also
 [Other Fortigate deployments](./README.md)

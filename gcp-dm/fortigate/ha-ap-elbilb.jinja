@@ -1,0 +1,200 @@
+{% set prefix = properties.prefix|default(env.deployment) %}
+{% import "../utils/netcalc.jinja" as netcalc %}
+
+resources:
+
+{% for address in properties.publicIPs %}
+- name: {{ prefix }}-{{ address.name }}
+  type: compute.v1.address
+  properties:
+    region: {{ properties.region }}
+    description: Public IP for FGT cluster
+{% endfor %}
+
+- name: Fortigate_Cluster_Basic
+  type: ha-ap.jinja
+  properties:
+    prefix: {{ prefix }}
+    region: {{ properties.region }}
+    zones: {{ properties.zones }}
+    instanceType: {{ properties.instanceType }}
+    license: {{ properties.license }}
+    version: {{ properties.version }}
+    networks: {{ properties.networks }}
+    serviceAccount: {{ properties.serviceAccount }}
+    serialPortEnable: {{ properties.serialPortEnable }}
+    {% if properties.version=="6.4.1"%}
+    attachPublicIP: false
+    {% endif %}
+    routes: []
+    fwConfig: |
+      config system probe-response
+        set mode http-probe
+        set http-probe-value OK
+      end
+      config system interface
+        edit port1
+          unset allowaccess
+          set secondary-IP enable
+          config secondaryip
+  {%- for address in properties.publicIPs %}
+            edit {{ loop.index }}
+            set ip $(ref.{{ prefix }}-{{ address.name }}.address) 255.255.255.255
+            set allowaccess probe-response
+            next
+  {%- endfor %}
+          end
+        next
+        edit port2
+          unset allowaccess
+          set secondary-IP enable
+          config secondaryip
+            edit 1
+            set ip $(ref.{{ prefix }}-ilb-route-fwdrule.IPAddress) 255.255.255.255
+            set allowaccess probe-response
+            next
+          end
+        next
+      end
+      config router static
+        edit 5
+          set dst 35.191.0.0/16
+          set device port2
+          set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
+        next
+        edit 6
+          set dst 130.211.0.0/22
+          set device port2
+          set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
+        next
+        edit 7
+          set dst 35.191.0.0/16
+          set device port1
+          set gateway {{ netcalc.getNthIp( properties.networks.external.ipCidrRange, 0 )}}
+        next
+        edit 8
+          set dst 130.211.0.0/22
+          set device port1
+          set gateway {{ netcalc.getNthIp( properties.networks.external.ipCidrRange, 0 )}}
+        next
+      end
+      {{ properties.fwConfig | indent(6) }}
+
+{# note: NLB requires lagacy health check, do NOT convert the httpHealthCheck below into healthCheck #}
+- name: {{ prefix }}-elb-ha-probe
+  type: compute.v1.httpHealthCheck
+  properties:
+    port: 8008
+    checkIntervalSec: 5
+    timeoutSec: 3
+    unhealthyThreshold: 2
+    healthyThreshold: 1
+- name: {{ prefix }}-elb-hapool
+  type: compute.v1.targetPool
+  properties:
+    region: {{ properties.region }}
+    healthChecks:
+    - $(ref.{{ prefix }}-elb-ha-probe.selfLink)
+    instances:
+    - $(ref.Fortigate_Cluster_Basic.fgt1Link)
+    - $(ref.Fortigate_Cluster_Basic.fgt2Link)
+    sessionAffinity: NONE
+{% for address in properties.publicIPs %}
+- name: {{ prefix }}-elb-tcpfwd-{{ address.name }}
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ properties.region }}
+    IPAddress: $(ref.{{ prefix }}-{{ address.name }}.selfLink)
+    IPProtocol: TCP
+    portRange: 1-65535
+    target: $(ref.{{ prefix }}-elb-hapool.selfLink)
+    loadBalancingScheme: EXTERNAL
+- name: {{ prefix }}-elb-udpfwd-{{ address.name }}
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ properties.region }}
+    IPAddress: $(ref.{{ prefix }}-{{ address.name }}.selfLink)
+    IPProtocol: UDP
+    portRange: 1-65535
+    target: $(ref.{{ prefix }}-elb-hapool.selfLink)
+    loadBalancingScheme: EXTERNAL
+{% endfor %}
+
+{% for zoneindx in [0,1] %}
+- name: {{ prefix }}-ilb-hagroup{{ zoneindx }}
+  type: compute.v1.instanceGroup
+  properties:
+    zone: {{ properties.zones[ zoneindx ]}}
+- name: {{ prefix }}-ilb-hagroup{{zoneindx}}-add
+  action: gcp-types/compute-v1:compute.instanceGroups.addInstances
+  metadata:
+    runtimePolicy:
+    - CREATE
+  properties:
+    zone: {{ properties.zones[ zoneindx ]}}
+    instanceGroup: $(ref.{{ prefix }}-ilb-hagroup{{ zoneindx }}.name)
+    instances:
+    - instance: $(ref.{{ prefix }}-fgt{{ loop.index }}.selfLink)
+{% endfor %}
+- name: {{ prefix }}-ilb-ha-probe
+  type: compute.v1.healthCheck
+  properties:
+    type: HTTP
+    httpHealthCheck:
+      port: 8008
+      checkIntervalSec: 5
+      timeoutSec: 3
+      unhealthyThreshold: 2
+      healthyThreshold: 1
+- name: {{ prefix }}-ilb-hapool
+  type: compute.v1.regionBackendService
+  properties:
+    region: {{ properties.region }}
+    loadBalancingScheme: INTERNAL 
+    network: {{ properties.networks.internal.vpc }}
+    protocol: TCP
+    healthChecks:
+    - $(ref.{{ prefix }}-ilb-ha-probe.selfLink)
+    backends:
+    - group: $(ref.{{ prefix }}-ilb-hagroup0.selfLink)
+    - group: $(ref.{{ prefix }}-ilb-hagroup1.selfLink)
+
+- name: {{ prefix }}-ilb-route-fwdrule
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ properties.region }}
+    loadBalancingScheme: INTERNAL
+    IPAddress: {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 3 )}}
+    IPProtocol: TCP
+    allPorts: true
+    backendService: $(ref.{{ prefix }}-ilb-hapool.selfLink)
+    network: {{ properties.networks.internal.vpc }}
+    subnetwork: {{ properties.networks.internal.subnet }}
+{% for route in properties.routes %}
+{% if "name" in route %}
+- name: {{ prefix }}-{{ route.name }}
+{% else %}
+- name: {{ prefix }}-ilb-route-{{ loop.index0 }}
+{% endif %}
+  type: compute.v1.route
+  properties:
+    destRange: {{ route.destRange }}
+    {% if "priority" in route %}
+    priority: {{ route.priority }}
+    {% endif %}
+    network: {{ properties.networks.internal.vpc }}
+    nextHopIlb: $(ref.{{ prefix }}-ilb-route-fwdrule.selfLink )
+{% endfor %}
+
+outputs:
+- name: FGT1-mgmt-ip
+  value: $(ref.Fortigate_Cluster_Basic.FGT1-mgmt-ip)
+- name: FGT2-mgmt-ip
+  value: $(ref.Fortigate_Cluster_Basic.FGT2-mgmt-ip)
+- name: defaultPassword
+  value: $(ref.Fortigate_Cluster_Basic.defaultPassword)
+- name: Inbound_Service_Addresses
+  value:
+  {%- for address in properties.publicIPs %}
+  - {{address.name}}: $(ref.{{ prefix }}-{{ address.name }}.address)
+  {% endfor %}

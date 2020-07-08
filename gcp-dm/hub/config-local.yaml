@@ -1,10 +1,10 @@
 imports:
 - path: fortigate-security-hub.jinja
 - path: ../fortigate/ha-ap-elb.jinja
-  name: ha-ap.jinja
-- path: ../license1.lic
+  name: fortigate.jinja
+- path: ../secrets/license1.lic
   name: license1.lic
-- path: ../license2.lic
+- path: ../secrets/license2.lic
   name: license2.lic
 
 resources:
@@ -12,14 +12,16 @@ resources:
   type: fortigate-security-hub.jinja
   properties:
     region: europe-west1
-    zone1: europe-west1-d
-    zone2: europe-west1-c
+    zones:
+    - europe-west1-d
+    - europe-west1-c
     fgtInstanceType: e2-highcpu-4
-    version: 6.4.0
+    version: 6.2.3
     license:
       type: byol
-      lic1: license1.lic
-      lic2: license2.lic
+      lics:
+      - license1.lic
+      - license2.lic
     spokeNetworks:
     - name: one
       ipCidrRange: 192.168.1.0/24
