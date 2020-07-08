@@ -50,7 +50,7 @@ resources:
           set secondary-IP enable
           config secondaryip
             edit 1
-            set ip $(ref.{{ prefix }}-ilb-route-fwdrule.IPAddress)
+            set ip $(ref.{{ prefix }}-ilb-route-fwdrule.IPAddress) 255.255.255.255
             set allowaccess probe-response
             next
           end
@@ -172,7 +172,7 @@ resources:
     subnetwork: {{ properties.networks.internal.subnet }}
 {% for route in properties.routes %}
 {% if "name" in route %}
-- name: {{ prefix }}-ilb-route-{{ route.name }}
+- name: {{ prefix }}-{{ route.name }}
 {% else %}
 - name: {{ prefix }}-ilb-route-{{ loop.index0 }}
 {% endif %}

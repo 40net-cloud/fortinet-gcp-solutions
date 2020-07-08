@@ -62,5 +62,5 @@ properties:
     type: array
     default:
     - destRange: 0.0.0.0/0
-      name: default
+      name: ilb-route-default
       priority: 100

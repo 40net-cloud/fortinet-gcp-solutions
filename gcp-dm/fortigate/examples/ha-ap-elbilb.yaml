@@ -30,15 +30,12 @@ resources:
     region: us-west1
     network: $(ref.external-vpc.selfLink)
     ipCidrRange: 172.17.1.0/24
+
 # Now it's time to deploy a Fortigates and protect the internalVpc
-# Note how you can skip some properties leaving them to default (e.g. licensing)
-# and declare only those you want to change (e.g. instanceType).
-# Mind the version 6.2 requires additionally a public IP attached directly to the instance
-# this requirement is taken care of in the ha-ap-elb.jinja
 - name: fortigate-cluster
   type: ha-ap-elbilb.jinja
   properties:
-    prefix: fgt-hademo2
+    prefix: fgt-ha-lb
     region: us-west1
     zones:
     - us-west1-b

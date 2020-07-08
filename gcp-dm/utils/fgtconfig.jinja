@@ -4,7 +4,11 @@ config firewall address
   edit {{ prefix }}-{{ spoke.name }}
     set type dynamic
     set sdn "gcp_conn"
+    {% if "vpc" in spoke %}
+    set filter "Network={{ spoke.vpc.split('/')|last}}"
+    {% else %}
     set filter "Network={{ prefix }}-{{ spoke.name }}"
+    {% endif %}
   next
 {%- endfor %}
 end

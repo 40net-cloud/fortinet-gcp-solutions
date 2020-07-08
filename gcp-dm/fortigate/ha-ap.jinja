@@ -168,7 +168,7 @@ resources:
         {%- endif %}
         config route
         {%- for route in properties.routes %}
-          edit "{{ prefix }}-{{ route.name | default( "route"~loop.index )}}-via-fgt"
+          edit "{{ prefix }}-{{ route.name | default( "route"~loop.index~"-via-fgt" )}}"
           next
         {%- endfor %}
         end
