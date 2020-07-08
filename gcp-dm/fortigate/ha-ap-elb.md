@@ -1,6 +1,8 @@
 # Active-Passive HA Fortigate cluster with External Load Balancer
 This template deploys a standard A-P HA cluster of 2 Fortigate instances behind an External Network Load Balancer. This architecture is suitable for deployments where multiple Public IPs are needed.
 
+# NOTE: this template is obsoleted by [HA in LB Sandwich](ha-ap-elbilb.md) design
+
 ![A-P HA Diagram](https://www.lucidchart.com/publicSegments/view/346f8206-c719-43df-bdb6-defdb694aced/image.png)
 
 ## Failover automation

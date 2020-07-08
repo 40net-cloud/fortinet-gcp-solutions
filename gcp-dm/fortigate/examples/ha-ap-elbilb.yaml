@@ -1,37 +1,34 @@
-# This configuration will deploy a High Availability Active-Passive cluster with External Load Balancer
+# This configuration will deploy a High Availability Active-Passive cluster in LB Sandwich
 # Protected (internal) and external networks are created in configuration and passed to the template
 # Template will create 2 additional VPCs for management and HA internal traffic
+
 
 imports:
 - path: ../ha-ap-elbilb.jinja
   name: ha-ap-elbilb.jinja
-- path: ../../secrets/license1.lic
-  name: license1.lic
-- path: ../../secrets/license2.lic
-  name: license2.lic
 
 resources:
 # first, let's prepare two networks...
-- name: bm-protected-vpc
+- name: protected-vpc
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: false
-- name: bm-external-vpc
+- name: external-vpc
   type: compute.v1.network
   properties:
     autoCreateSubnetworks: false
 # ...and some subnets
-- name: bm-protected-uswest1
+- name: protected-uswest1
   type: compute.v1.subnetwork
   properties:
     region: us-west1
-    network: $(ref.bm-protected-vpc.selfLink)
+    network: $(ref.protected-vpc.selfLink)
     ipCidrRange: 172.17.0.0/24
-- name: bm-external-uswest1
+- name: external-uswest1
   type: compute.v1.subnetwork
   properties:
     region: us-west1
-    network: $(ref.bm-external-vpc.selfLink)
+    network: $(ref.external-vpc.selfLink)
     ipCidrRange: 172.17.1.0/24
 # Now it's time to deploy a Fortigates and protect the internalVpc
 # Note how you can skip some properties leaving them to default (e.g. licensing)
@@ -41,30 +38,27 @@ resources:
 - name: fortigate-cluster
   type: ha-ap-elbilb.jinja
   properties:
-    prefix: bm-hatest2
+    prefix: fgt-hademo2
     region: us-west1
     zones:
     - us-west1-b
     - us-west1-c
     license:
-      type: byol
-      lics:
-      - license1.lic
-      - license2.lic
+      type: payg
     instanceType: e2-highcpu-4
     version: 6.4.1
     networks:
       internal:
-        vpc: $(ref.bm-protected-vpc.selfLink)
-        subnet: $(ref.bm-protected-uswest1.selfLink)
+        vpc: $(ref.protected-vpc.selfLink)
+        subnet: $(ref.protected-uswest1.selfLink)
         ipCidrRange: 172.17.0.0/24
       external:
-        vpc: $(ref.bm-external-vpc.selfLink)
-        subnet: $(ref.bm-external-uswest1.selfLink)
+        vpc: $(ref.external-vpc.selfLink)
+        subnet: $(ref.external-uswest1.selfLink)
         ipCidrRange: 172.17.1.0/24
     publicIPs:
-    - name: bm-app1
-    - name: bm-app2
+    - name: app1
+    - name: app2
 
 # Note:
 # configuration and template files can also output values. Here you can see how
