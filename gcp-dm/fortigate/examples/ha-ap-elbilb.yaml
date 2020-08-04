@@ -4,7 +4,7 @@
 
 
 imports:
-- path: ../ha-ap-elbilb.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/fortigate/ha-ap-elbilb.jinja
   name: ha-ap-elbilb.jinja
 
 resources:

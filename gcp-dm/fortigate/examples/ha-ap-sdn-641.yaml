@@ -4,7 +4,7 @@
 # Template will create 2 additional VPCs for management and HA internal traffic
 
 imports:
-- path: ../ha-ap.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/fortigate/ha-ap.jinja
   name: ha-ap.jinja
 
 
