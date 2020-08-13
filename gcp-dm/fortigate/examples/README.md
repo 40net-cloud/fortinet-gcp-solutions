@@ -41,7 +41,7 @@ This configuration file deploys exactly the same architecture as ha-ap-sdn.yaml,
 
 ### ha-ap-sdn_byol.yaml
 This configuration uses [../ha-ap.jinja](ha-ap.jinja) template to deploy an Active-Passive HA cluster with 2 Fortigate members. It builds on the basic ha-ap-sdn.yaml by using BYOL licenses and defining address spaces for heartbeat and management networks.
-NOTE: you have to provide 2 additional files containing Fortigate VM licenses in files license1.lic and license2.lic located in ../../secrets directory as indicated in the imports section. Feel free to modify the paths (note names!) in import section to match your setup. 
+NOTE: you have to provide 2 additional files containing Fortigate VM licenses in files license1.lic and license2.lic located in ../../secrets directory as indicated in the imports section. Feel free to modify the paths (but do not change names!) in import section to match your setup. 
 To host the NICs, configuration file creates 2 VPC Networks with one subnet each before calling the template. Check the architecture [../ha-ap.md](info page) for more details.
 
 ### ha-ap-elbilb.yaml
