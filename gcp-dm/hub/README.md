@@ -9,7 +9,7 @@ Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC 
 
 ![Peered Security Hub diagram](https://www.lucidchart.com/publicSegments/view/0d77291e-9bd6-4c71-a2cd-ba5a85de61bd/image.png)
 
-Note that the Security Hub design focuses on the cloud architecture, while the Fortigate part is flexible - you can use any architecture available in this repository by changing the import path in your configuration file (compare [config.yaml](config.yaml) and [config-elb.yaml](config-elb.yaml))
+Note that the Security Hub design focuses on the cloud architecture, while the Fortigate part is flexible - you can use any building block available in this repository by changing the import path in your configuration file (compare [config.yaml](config.yaml) and [config-elb.yaml](config-elb.yaml))
 
 ## Deployed resources
 - 2 Fortigate VMs - clustered, with networking, GCP Connector and spoke network address objects preconfigured
@@ -82,4 +82,4 @@ By default all deployed resources are prefixed with the deployment name (e.g. my
 # What next? Post-deployment Steps
 1. Connect to the Master Fortigate instance and set your administrator password. Wait for the cluster to come into full sync
 2. Connect to Slave Fortigate to make sure it is properly licensed and in sync. In case of HA sync problems, refer to [Fortinet documentation](https://kb.fortinet.com/kb/documentLink.do?externalID=FD36494)
-3. Remove public IP from nic0 of Slave instance. It was added for the sake of deploying PAYG licence, but will interfere with failing over the service Public IP during HA failover event.
+

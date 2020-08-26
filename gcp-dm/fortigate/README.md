@@ -1,14 +1,22 @@
-# Fortigate deployment models
-This directory contains several ways to deploy Fortigate appliance(s).
+# Fortigate Building Blocks
+This directory contains Deployment Manager templates for the following Fortigate in GCP deployment building blocks:
 
-- [Single VM](singlevm.md)
-- [Active-Passive HA Cluster (single Public IP)](ha-ap.md)
-- [Active-Passive HA in Load Balancer Sandwich (multiple Public IPs)](ha-ap-elbilb.md)
+### [Single VM](singlevm.md)
+This single FortiGate VM will process all the traffic and as such become a single point of failure during operations as well as upgrades. This block can also be used in an architecture with multiple regions where a FortiGate is deployed in each region. 
+Single instance is subject to 99.5% GCP compute SLA.
+
+### [Active-Passive HA Cluster with Fabric Connector Failover](ha-ap.md)
+This design will deploy 2 FortiGate VMs in 2 zones and preconfigure an Active/Passive cluster using unicast FGCP HA protocol. This protocol will synchronize the configuration. On failover the passive FortiGate takes control and will issue api calls to GCP API to shift the External IP and update the route(s) to itself. Shifting the public IP and gateway IPs of the routes will take some time and depends on the number of routes. This design supports only a single External IP.
+This design is subject to 99.99% GCP Compute SLA.
+
+### [Active-Passive HA in Load Balancer Sandwich](ha-ap-elbilb.md)
+This design will deploy 2 FortiGate VMs in 2 zones, preconfigure an Active/Passive cluster using unicast FGCP HA protocol, and place them between a pair of external and internal load balancers. On failover load balancers will detect failure of the primary instance using active probes on port 8008 and will switch traffic to the secondary instance. The failover time is noticeably faster than using Fabric Connector and is configurable in Health Check settings. Routing via GCP Internal Load Balancer does not support tag-based routes. This design supports multiple public IPs.
+This design is subject to 99.99% GCP Compute SLA.
 
 ## How to Deploy
 All templates are written for [GCP Deployment Manager](https://cloud.google.com/deployment-manager). DM templates can be deployed using [`gcloud`](https://cloud.google.com/sdk) command-line tool available for local downloads and in your [cloud shell](https://cloud.google.com/shell/docs/using-cloud-shell).
 
-Templates (\*.jinja) can be referenced directly (and provide all parameters in the command line), e.g.:
+Templates (\*.jinja) can be referenced directly (and provided all parameters in the command line), e.g.:
 ```
 gcloud deployment-manager deployments create --template singlevm.jinja --properties=...
 ```
@@ -24,6 +32,7 @@ imports:
   name: ha-ap.jinja
 ```
 
+See [examples](examples) directory for configuration file examples.
 
 ## Properties Available
 All templates in this directory share common properties (at least most of them). Properties are configurable values you can easily modify either using `--properties` if deploying template file directly, or by adding them to the configuration file under `properties` section.
@@ -62,9 +71,11 @@ type: payg
 If you plan to use BYOL license provisioning, follow these steps:
 1. save your license file(s) in location you can access during deployment
 2. import license file(s) in your configuration file, e.g.:
+```yaml
         imports:
          - path: ../mylicenses/FGVM04TM20001661.lic
            name: forti1.lic
+```
 3. refer to imported license files in `license` property as shown below:
 
 Single VM:
@@ -88,13 +99,15 @@ lics:
 * hasync
 * mgmt
 
+The templates will NOT create internal and external networks, you have to create them manually or add to the configuration file (as in examples included in this repository). Heartbeat and dedicated management networks (hasync and mgmt) can refer to existing networks or be created during HA cluster deployment.
+
 Each network in `networks` object has following properties:
 - **vpc** - url of VPC Network
 - **subnet** - url of VPC Subnet
 - **ipCidrRange** - [optional] CIDR address of the subnet
 - **networkIP** - [optional] instance IP address with mask (e.g. 192.168.0.2/24).
 
-NOTE: If **networkIP** is not set, first IP from ipCidrRange will be assigned as static IP. If **ipCidrRange** is not set, instance will use DHCP assignment. Long netmask (255.255.255.0) is NOT supported.
+NOTE: If **networkIP** is not set, first IP from ipCidrRange will be assigned as static IP. If **ipCidrRange** is not set, instance will use DHCP assignment. Long netmask (255.255.255.0) is NOT supported. If **vpc** is not set for hasync and mgmt networks, they wil be created.
 
 #### Example of a complete object:
 ```yaml
