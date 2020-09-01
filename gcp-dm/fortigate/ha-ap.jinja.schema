@@ -32,8 +32,8 @@ properties:
       type: payg
   version:
     type: string
-    description: Firmware version to deploy. Currently only 6.2.3 is supported
-    default: 6.2.3
+    description: Firmware version to deploy.
+    default: 6.4.2
   networks:
     type: object
     description: Indicate VPC Networks and subnets to be used (internal, external, hasync, mgmt). Each network need references to vpc and subnet (vpc and subnet properties) as well as cidr defined.

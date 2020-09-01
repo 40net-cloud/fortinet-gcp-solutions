@@ -49,7 +49,7 @@ All templates in this directory share common properties (at least most of them).
 `zones` | *gce-zone[]* | Zones for Master and Slave instances | | :x: | :heavy_check_mark: | :heavy_check_mark:
 `instanceType` | *string* | Type of GCE instance to deploy | "e2-highcpu-4" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `license` | *object* | Description of Fortigate licensing. See [below](#license) for structure details | type: "payg" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
-`version` | *enum* | Firmware version to deploy. Currently supported 6.2.3 and 6.4.0 | "6.2.3" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
+`version` | *enum* | Firmware version to deploy. Currently supported 6.2.3, 6.2.5, 6.4.0, 6.4.1 and 6.4.2 | "6.4.2" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `networks` | *object* | Networks to connect to. See [below](#networks) for object structure | | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `serviceAccount` | *string* | GCP service account to use for SDN connector | "default" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `serialPortEnable` | *boolean* | Enable/disable serial port console | true | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
