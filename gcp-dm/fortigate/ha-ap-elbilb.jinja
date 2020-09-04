@@ -23,7 +23,7 @@ resources:
     networks: {{ properties.networks }}
     serviceAccount: {{ properties.serviceAccount }}
     serialPortEnable: {{ properties.serialPortEnable }}
-    {% if properties.version=="6.4.1"%}
+    {% if "6.4." in properties.version %}
     attachPublicIP: false
     {% endif %}
     routes: []
