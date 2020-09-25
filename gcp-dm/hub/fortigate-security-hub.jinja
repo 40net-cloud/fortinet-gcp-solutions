@@ -53,3 +53,8 @@ outputs:
     Fortigate_B: $(ref.Fortigate_Cluster.FGT2-mgmt-ip)
 - name: Default_Password
   value: $(ref.Fortigate_Cluster.defaultPassword)
+- name: Service_IPs
+  value:
+{% for eip in properties.publicIPs %}
+  - $(ref.{{ prefix }}-{{ eip.name }}.address)
+{% endfor %}

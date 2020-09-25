@@ -44,3 +44,7 @@ resources:
 outputs:
   - name: Management_IP
     value: $(ref.SecurityHub.Management_IP)
+  - name: Default Password
+    value: $(ref.SecurityHub.Default_Password)
+  - name: Service IPs
+    value: $(ref.SecurityHub.Service_IPs)

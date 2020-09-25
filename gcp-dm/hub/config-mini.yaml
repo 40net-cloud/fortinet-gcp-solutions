@@ -9,5 +9,6 @@ resources:
   type: fortigate-security-hub.jinja
   properties:
     region: europe-west1
-    zone1: europe-west1-d
-    zone2: europe-west1-c
+    zones:
+    - europe-west1-d
+    - europe-west1-c
