@@ -4,7 +4,6 @@ info:
 
 imports:
 - path: vpc.jinja
-- path: ../utils/netcalc.jinja
 - path: ../utils/fgtconfig.jinja
 
 properties:
@@ -26,7 +25,7 @@ properties:
       type: payg
   version:
     type: string
-    default: "6.2.3"
+    default: "6.4.2"
   publicIPs:
     type: array
     description: Array of names for public IPs to be connected. Used only with fortigate ELB deployments
@@ -56,3 +55,6 @@ properties:
        ipCidrRange: 10.0.1.0/24
      - name: backend
        ipCidrRange: 10.0.2.0/24
+  fwConfig:
+    type: string
+    default: ""

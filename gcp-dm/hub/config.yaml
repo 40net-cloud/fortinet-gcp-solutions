@@ -2,15 +2,16 @@ imports:
 - path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/hub/fortigate-security-hub.jinja
   name: fortigate-security-hub.jinja
 - path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/fortigate/ha-ap.jinja
-  name: ha-ap.jinja
+  name: fortigate.jinja
 
 resources:
 - name: SecurityHub
   type: fortigate-security-hub.jinja
   properties:
     region: europe-west1
-    zone1: europe-west1-d
-    zone2: europe-west1-c
+    zones:
+    - europe-west1-d
+    - europe-west1-c
     fgtInstanceType: e2-highcpu-4
     license:
       type: payg
@@ -38,3 +39,7 @@ resources:
 outputs:
   - name: Management_IP
     value: $(ref.SecurityHub.Management_IP)
+  - name: Default Password
+    value: $(ref.SecurityHub.Default_Password)
+  - name: Service IPs
+    value: $(ref.SecurityHub.Service_IPs)
