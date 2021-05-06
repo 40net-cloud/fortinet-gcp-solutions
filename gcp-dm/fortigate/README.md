@@ -2,7 +2,7 @@
 This directory contains Deployment Manager templates for the following Fortigate in GCP deployment building blocks:
 
 ### [Single VM](singlevm.md)
-This single FortiGate VM will process all the traffic and as such become a single point of failure during operations as well as upgrades. This block can also be used in an architecture with multiple regions where a FortiGate is deployed in each region. 
+This single FortiGate VM will process all the traffic and as such become a single point of failure during operations as well as upgrades. This block can also be used in an architecture with multiple regions where a FortiGate is deployed in each region.
 Single instance is subject to 99.5% GCP compute SLA.
 
 ### [Active-Passive HA Cluster with Fabric Connector Failover](ha-ap.md)
@@ -49,7 +49,7 @@ All templates in this directory share common properties (at least most of them).
 `zones` | *gce-zone[]* | Zones for Master and Slave instances | | :x: | :heavy_check_mark: | :heavy_check_mark:
 `instanceType` | *string* | Type of GCE instance to deploy | "e2-highcpu-4" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `license` | *object* | Description of Fortigate licensing. See [below](#license) for structure details | type: "payg" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
-`version` | *enum* | Firmware version to deploy. Currently supported 6.2.3, 6.2.5, 6.4.0, 6.4.1 and 6.4.2 | "6.4.2" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
+`version` | *enum* | Firmware version to deploy. Currently supported 6.2.3, 6.2.5, 6.4.0, 6.4.1, 6.4.2, 6.4.3, 6.4.4, 6.4.5, 7.0.0 | "6.4.5" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `networks` | *object* | Networks to connect to. See [below](#networks) for object structure | | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `serviceAccount` | *string* | GCP service account to use for SDN connector | "default" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 `serialPortEnable` | *boolean* | Enable/disable serial port console | true | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
