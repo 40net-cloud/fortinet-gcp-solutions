@@ -71,12 +71,28 @@
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-646-20210531-001-w-license" -%}
   {% endif -%}
 {% endif -%}
+{% if version == "6.4.7" -%}
+  {% if licenseType == "byol" -%}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-647-20210907-001-w-license" -%}
+  {% endif -%}
+  {% if licenseType == "payg" -%}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-647-20210907-001-w-license" -%}
+  {% endif -%}
+{% endif -%}
 {% if version == "7.0.0" -%}
   {% if licenseType == "byol" -%}
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-700-20210407-001-w-license" -%}
   {% endif -%}
   {% if licenseType == "payg" -%}
   {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-700-20210407-001-w-license" -%}
+  {% endif -%}
+{% endif -%}
+{% if version == "7.0.1" -%}
+  {% if licenseType == "byol" -%}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-701-20210721-001-w-license" -%}
+  {% endif -%}
+  {% if licenseType == "payg" -%}
+  {% set firmwareImage = "https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-701-20210721-001-w-license" -%}
   {% endif -%}
 {% endif -%}
 {{ firmwareImage }}
