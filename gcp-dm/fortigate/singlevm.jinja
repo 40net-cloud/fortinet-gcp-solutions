@@ -114,7 +114,7 @@ resources:
     metadata:
       items:
       - key: serial-port-enable
-        value: {{ properties.serialPortEnable }}
+        value: {{ properties.serialPortEnable|string }}
     {% if properties.license.type == "byol" %}
       - key: license
         value: |
