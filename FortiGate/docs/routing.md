@@ -44,8 +44,8 @@ Open Network / Interfaces and double-click the interface you want to change. In 
 ## Load Balancer routes
 
 If your FortiGate is accepting connections via a load balancer, you will have to additionally configure routes to health probes IP ranges *on each interface receiving traffic* to prevent health probes from being blocked by the RPF (Reverse Path Forwarding) check. The ranges (different for different types of load balancers) are documented by Google and for the Internal Load Balancer are:
-•	35.191.0.0/16
-•	130.211.0.0/22
+-	35.191.0.0/16
+-	130.211.0.0/22
 
 The ranges used by External Network Load Balancer are already covered by the 0.0.0.0/0 route on the external interface.
 
