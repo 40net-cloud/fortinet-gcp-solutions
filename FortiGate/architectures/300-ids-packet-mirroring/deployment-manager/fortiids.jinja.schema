@@ -1,0 +1,97 @@
+info:
+  title: FortiGate IDS
+  description: ""
+  version: 0.9
+
+imports:
+- path: config.txt
+  name: config.txt
+
+
+properties:
+  deploymentName:
+    type: string
+    description: Deployment name to be included in resource names. Defaults to the Deployment Manager deployment name.
+  prefix:
+    type: string
+    description: Prefix to be added to all resource names
+  sensors:
+    type: object
+    required:
+    - fortiAnalyzer
+    properties:
+      version:
+        type: string
+        default: 7.0.2
+      machineType:
+        type: string
+        default: e2-standard-2
+      defaultSensorCount:
+        type: integer
+        default: 2
+        minimum: 1
+        description: How many FortiGate sensors to deploy per region (can be overridden in policies definition)
+      subnetBase:
+        type: string
+        default: 172.20.0.0
+      fortiAnalyzer:
+        type: object
+        required:
+        - address
+        - serial
+        properties:
+          address:
+            type: string
+            description: Address of FortiAnalyzer. Must be accessible from FortiGates
+          serial:
+            type: string
+            description: Serial number of FortiAnalyzer
+  mirroringPolicies:
+    type: array
+    items:
+      type: object
+      properties:
+        region:
+          type: string
+        target:
+          type: object
+          required:
+          - vpcNetwork
+          properties:
+            vpcNetwork:
+              type: string
+            subnets:
+              type: array
+              items:
+                type: string
+              decription: List of subnets to be monitored. Only traffic to/from these subnets will be scanned by IDS.
+            tags:
+              type: array
+              maxItems: 5
+              items:
+                type: string
+              description: List of VM network tags. Only traffic to/from instances with these tags will be scanned by IDS.
+            instances:
+              type: array
+              items:
+                type: string
+              description: List of instances. Only traffic to/from these instances will be scanned by IDS.
+        filter:
+          type: object
+          properties:
+            IPProtocols:
+              type: array
+              items:
+                type: string
+            filterCidrRanges:
+              type: array
+              items:
+                type: string
+            direction:
+              type: string
+              enum: ["INGRESS","EGRESS","BOTH"]
+              default: BOTH
+        sensorCount:
+          type: integer
+          minimum: 1
+          description: Overrides defaultSensorCount for the region

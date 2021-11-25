@@ -1,0 +1,293 @@
+{% set prefix = properties.prefix|default(env.deployment) %}
+
+{% import "utils-netcalc.jinja" as netcalc %}
+{% import "utils-images.jinja" as images %}
+
+{% set firmwareImage=images.getFgtImage( properties.version, properties.license.type ) %}
+{% set region=properties.zones[0].split("-")[0]~"-"~properties.zones[0].split("-")[1] %}
+
+{% set defaultHasyncRange="10.254.254.0/25" %}
+{% set defaultMgmtRange="10.254.254.128/25" %}
+{% set defaultHasyncNetName="fgt-hasync" %}
+{% set defaultMgmtNetName="fgt-mgmt" %}
+{% set defaultExternalIpName="ext-ip" %}
+
+{% if "ipCidrRange" in properties.networks.hasync %}
+{% set hasyncCidrRange=properties.networks.hasync.ipCidrRange %}
+{% else %}
+{% set hasyncCidrRange=defaultHasyncRange %}
+{% endif %}
+{% if "ipCidrRange" in properties.networks.mgmt %}
+{% set mgmtCidrRange=properties.networks.mgmt.ipCidrRange %}
+{% else %}
+{% set mgmtCidrRange=defaultMgmtRange %}
+{% endif %}
+
+resources:
+{# Create hasync and management networks and subnets if not provided in properties #}
+{% if not "vpc" in properties.networks.hasync %}
+- name: {{ prefix }}-{{ defaultHasyncNetName }}
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+{% set hasyncVpc="$(ref."~prefix~"-"~defaultHasyncNetName~".selfLink)" %}
+{% else %}
+{% set hasyncVpc=properties.networks.hasync.vpc %}
+{% endif %}
+{% if not "vpc" in properties.networks.mgmt %}
+- name: {{ prefix }}-{{ defaultMgmtNetName }}
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+{% set mgmtVpc="$(ref."~prefix~"-"~defaultMgmtNetName~".selfLink)" %}
+{% else %}
+{% set mgmtVpc=properties.networks.mgmt.vpc %}
+{% endif %}
+{% if not "subnet" in properties.networks.hasync %}
+- name: {{ prefix }}-{{ defaultHasyncNetName }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    region: {{ region }}
+    network: {{ hasyncVpc }}
+    ipCidrRange: {{ hasyncCidrRange }}
+  {% set hasyncSubnet="$(ref."~prefix~"-"~defaultHasyncNetName~"-subnet.selfLink)" %}
+  {% else %}
+  {% set hasyncSubnet=properties.networks.hasync.subnet %}
+{% endif %}
+{% if not "subnet" in properties.networks.mgmt %}
+- name: {{ prefix }}-{{ defaultMgmtNetName }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    region: {{ region }}
+    network: {{ mgmtVpc }}
+    ipCidrRange: {{ mgmtCidrRange }}
+  {% set mgmtSubnet="$(ref."~prefix~"-"~defaultMgmtNetName~"-subnet.selfLink)" %}
+  {% else %}
+  {% set mgmtSubnet=properties.networks.mgmt.subnet %}
+  {% set mgmtCidrRange=properties.networks.mgmt.ipCidrRange %}
+{% endif %}
+
+{# Cloud NAT is used by passive instance to verify licence #}
+- name: {{ prefix }}-fgt-cloudrouter
+  type: compute.v1.router
+  properties:
+    region: {{ region }}
+    network: {{ properties.networks.external.vpc }}
+    nats:
+    - name: {{ prefix }}-fgt-cloudnat
+      sourceSubnetworkIpRangesToNat: ALL_SUBNETWORKS_ALL_IP_RANGES
+      natIpAllocateOption: AUTO_ONLY
+
+{% if properties.attachPublicIP %}
+- name: {{ prefix }}-{{ defaultExternalIpName }}
+  type: compute.v1.address
+  properties:
+    region: {{ region }}
+    description: Floating public IP for FGT cluster
+{% endif %}
+
+{% for eip in properties.forwardedPublicIPs %}
+- name: {{prefix}}-eip-{{eip.name}}
+  type: compute.v1.address
+  properties:
+    region: {{ region }}
+{% for proto in eip.protocols %}
+- name: {{prefix}}-efr-{{eip.name}}-{{proto|lower|replace('_','')}}
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{region}}
+    IPAddress: $(ref.{{prefix}}-eip-{{eip.name}}.selfLink)
+    IPProtocol: {{proto}}
+    allPorts: true
+    target: $(ref.{{prefix}}-fgt1-target.selfLink)
+  {# explicit dependency needed for errorless deletion after failover to fgt2 #}
+  metadata:
+    dependsOn:
+    - {{prefix}}-fgt2-target
+{% endfor %} {# for all protocols #}
+{% endfor %} {# for all forwardedPublicIPs #}
+
+
+{# Create FortiGate instances #}
+{% for instance in ["Primary_FGT", "Secondary_FGT"] %}
+- name: {{ instance }}
+  type: singlevm.jinja
+  properties:
+    prefix: {{ prefix }}
+    region: {{ region }}
+    zone: {{ properties.zones[ loop.index0 ]}}
+    instanceType: {{ properties.instanceType }}
+    version: {{ properties.version }}
+    multiIpSubnetEnable: {{ properties.multiIpSubnetEnable }}
+    name: fgt{{ loop.index }}
+    serialPortEnable: {{properties.serialPortEnable}}
+    {% if loop.index0==0 and properties.attachPublicIP %}
+    externalIP:
+      address: $(ref.{{ prefix }}-{{ defaultExternalIpName }}.address )
+      networkTier: $(ref.{{ prefix }}-{{ defaultExternalIpName }}.networkTier )
+    {% else %}
+    attachPublicIP: false
+    {% endif %}
+    license:
+      type: {{ properties.license.type }}
+      {% if properties.license.type=='byol' %}
+      lic: {{ properties.license.lics[ loop.index0 ]}}
+      {% endif %}
+    networks:
+      external:
+        vpc: {{ properties.networks.external.vpc }}
+        subnet: {{ properties.networks.external.subnet }}
+        {% if "ipCidrRange" in properties.networks.external %}
+        ipCidrRange: {{ properties.networks.external.ipCidrRange }}
+        networkIP: {{ netcalc.getNthIpWithMask( properties.networks.external.ipCidrRange, loop.index ) }}
+        {% endif %}
+      internal:
+        vpc: {{ properties.networks.internal.vpc }}
+        subnet: {{ properties.networks.internal.subnet }}
+        {% if "ipCidrRange" in properties.networks.internal %}
+        ipCidrRange: {{ properties.networks.internal.ipCidrRange }}
+        networkIP: {{ netcalc.getNthIpWithMask( properties.networks.internal.ipCidrRange, loop.index ) }}
+        {% endif %}
+      hasync:
+        vpc: {{ hasyncVpc }}
+        subnet: {{ hasyncSubnet }}
+        ipCidrRange: {{ hasyncCidrRange }}
+        networkIP: {{ netcalc.getNthIpWithMask( hasyncCidrRange, loop.index ) }}
+      mgmt:
+        vpc: {{ mgmtVpc }}
+        subnet: {{ mgmtSubnet }}
+        ipCidrRange: {{ mgmtCidrRange }}
+        networkIP: {{ netcalc.getNthIpWithMask( mgmtCidrRange, loop.index ) }}
+  {# Skip routes and cloud firewall rules creation for secondary instance #}
+  {% if loop.index0>0 %}
+    routes: {{[]}}
+    createCloudFirewallRules: false
+  {% else %}
+    routes: {{ properties.routes }}
+  {% endif %}
+    fwConfig: |
+      config system ha
+        set group-name "cluster1"
+        set mode a-p
+        set hbdev "port3" 50
+        set session-pickup enable
+        set ha-mgmt-status enable
+        config ha-mgmt-interfaces
+          edit 1
+          set interface "port4"
+          set gateway {{ netcalc.getNthIp( mgmtCidrRange, 0 )}}
+          next
+        end
+        set override disable
+        set priority {{ loop.index%2 }}
+        set unicast-hb enable
+        set unicast-hb-peerip {{ netcalc.getNthIp( hasyncCidrRange, (loop.index%2)+1 )}}
+        set unicast-hb-netmask {{ netcalc.getNetmaskLong( hasyncCidrRange )}}
+      end
+      config system sdn-connector
+        edit "gcp_conn"
+        set type gcp
+        set ha-status enable
+        {%- if properties.attachPublicIP %}
+        config external-ip
+          edit "{{ prefix }}-{{ defaultExternalIpName }}"
+          next
+        end
+        {%- endif %}
+        config route
+        {%- for route in properties.routes %}
+          edit "{{ prefix }}-{{ route.name | default( "route"~loop.index~"-via-fgt" )}}"
+          next
+        {%- endfor %}
+        end
+        {%- set instIndx=loop.index %}
+        config forwarding-rule
+          {%- for eip in properties.forwardedPublicIPs %}
+            {%- for proto in eip.protocols %}
+            edit {{prefix}}-efr-{{eip.name}}-{{proto|lower|replace('_','')}}
+            set target {{prefix}}-fgt{{instIndx}}-target
+            next
+            {%- endfor %}
+          {%- endfor %}
+        end
+      end
+      config system interface
+        edit port1
+        set allowaccess ping
+        {%- if properties.forwardedPublicIPs|length > 0%}
+          set secondary-IP enable
+          config secondaryip
+          {%- for eip in properties.forwardedPublicIPs %}
+            edit {{loop.index}}
+            set ip $(ref.{{prefix}}-eip-{{eip.name}}.address) 255.255.255.255
+            next
+          {%- endfor %}
+          end
+        {%- endif %}
+        next
+      end
+      {%- if properties.forwardedPublicIPs|length > 0 %}
+      config firewall ippool
+        {%- for eip in properties.forwardedPublicIPs %}
+        edit {{eip.name}}
+        set startip $(ref.{{prefix}}-eip-{{eip.name}}.address)
+        set endip $(ref.{{prefix}}-eip-{{eip.name}}.address)
+        next
+        {%- endfor %}
+      end
+      {%- endif %}
+      {{ properties.fwConfig | indent(6) }}
+{% if properties.forwardedPublicIPs|length > 0 %}
+- name: {{prefix}}-fgt{{ loop.index }}-target
+  type: compute.v1.targetInstance
+  properties:
+    instance: $(ref.{{prefix}}-fgt{{loop.index}}.selfLink)
+    zone: {{properties.zones[loop.index0]}}
+{% endif %}
+{% endfor %}
+
+- name: {{ prefix }}-fgt-allow-hasync
+  type: compute.v1.firewall
+  properties:
+    network: {{ hasyncVpc }}
+    priority: 100
+    sourceTags:
+    - {{ prefix }}-fgt
+    targetTags:
+    - {{ prefix }}-fgt
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+- name: {{ prefix }}-fgt-allow-mgmt
+  type: compute.v1.firewall
+  properties:
+    network: {{ mgmtVpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{ prefix }}-fgt
+    allowed:
+    - IPProtocol: TCP
+
+
+outputs:
+- name: FGT1-mgmt-ip
+  value: $(ref.{{ prefix}}-fgt1.networkInterfaces[3].accessConfigs[0].natIP)
+- name: FGT2-mgmt-ip
+  value: $(ref.{{ prefix}}-fgt2.networkInterfaces[3].accessConfigs[0].natIP)
+{% if properties.attachPublicIP %}
+- name: Public_IP
+  value: $(ref.{{ prefix }}-ext-ip.address)
+{% endif %}
+- name: defaultPassword
+  value: $(ref.{{ prefix }}-fgt1.id)
+- name: fgt1Link
+  value: $(ref.{{ prefix }}-fgt1.selfLink )
+- name: fgt2Link
+  value: $(ref.{{ prefix }}-fgt2.selfLink )
+{% for eip in properties.forwardedPublicIPs %}
+- name: {{eip.name}}
+  value: $(ref.{{prefix}}-eip-{{eip.name}}.address)
+{% endfor %}

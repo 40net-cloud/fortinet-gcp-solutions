@@ -1,0 +1,53 @@
+# This configuration will deploy a High Availability Active-Passive cluster
+# with SDN Connector-based failover and a single IP directly attached to FGT.
+# By default it wil luse PAYG images.
+
+# 2 Sample VPC Networks are created before deploying the fortigate cluster
+# the other 2 (hasync and mgmt) will be created by the template with default names and CIDRs.
+
+# All resource names will be prefixed with the deployment name.
+
+
+imports:
+- path: ../../../modules-dm/fgcp-ha-ap-sdn.jinja
+  name: fgcp-ha-ap-sdn.jinja
+
+# This template is included to simplify creating of demo VPCs. You will not need
+# it if deploying with your existing networks.
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: utils-sample-vpcs.jinja
+
+resources:
+# First, let's create a sample set of VPC Networks with subnets.
+# You will not need it if you re-use this configuration with your VPCs, but
+# remember to modify references in the fortigate-cluster resource below
+- name: Sample_Networks
+  type: utils-sample-vpcs.jinja
+  properties:
+    region: europe-west1
+    networks:
+    - external
+    - internal
+
+# Now it's time to deploy Fortigates and protect the internalVpc
+# Note how you can skip some properties leaving them to default (e.g. instanceType)
+# and declare only those you want to change (e.g. license)
+- name: fortigate-cluster
+  type: fgcp-ha-ap-sdn.jinja
+  properties:
+    zones:
+    - europe-west1-b
+    - europe-west1-c
+    networks:
+# NOTE: this configuration references VPC and subnets created by the Sample_Networks
+# template and uses URLs included in that template output. You should replace them with URLs of
+# your own networks and subnets. URLs for hasync and mgmt can be skipped to make the template
+# create new VPCs.
+      external:
+        vpc: $(ref.Sample_Networks.external-vpc)
+        subnet: $(ref.Sample_Networks.external-sb)
+        ipCidrRange: 172.20.0.0/24
+      internal:
+        vpc: $(ref.Sample_Networks.internal-vpc)
+        subnet: $(ref.Sample_Networks.internal-sb)
+        ipCidrRange: 172.20.1.0/24

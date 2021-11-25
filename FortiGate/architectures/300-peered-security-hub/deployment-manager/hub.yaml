@@ -1,0 +1,117 @@
+imports:
+- path: ../../../modules-dm/fgcp-ha-ap-multilb.jinja
+  name: fgcp-ha-ap-multilb.jinja
+- path: peerings.jinja
+  name: peerings.jinja
+
+# Update and uncomment 4 lines below to deploy with your own licenses
+#- path: ../../../../secrets/FGVM04TM21008011.lic
+#  name: lic1.lic
+#- path: ../../../../secrets/FGVM04TM21008012.lic
+#  name: lic2.lic
+
+# This template is included to simplify creating of demo VPCs. You will not need
+# it if deploying with your existing networks.
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: utils-sample-vpcs.jinja
+
+resources:
+# Create a sample set of VPC Networks with subnets.
+# this helper template can also create 2 sample spoke VPCs
+# You will not need it if you re-use this configuration with your VPCs
+- name: Sample_Networks
+  type: utils-sample-vpcs.jinja
+  properties:
+    prefix: demo
+    region: us-west1
+    networks:
+    - external
+    - internal
+    - hasync
+    - mgmt
+    - spoke1
+    - spoke2
+
+# Peerings resource will peer all the VPCs together creating a hub-and-spoke topology
+- name: Peerings
+  type: peerings.jinja
+  properties:
+    prefix: demo
+    hub:
+      name: demo-internal-vpc
+      url: $(ref.Sample_Networks.internal-vpc)
+    spokes:
+    - name: demo-spoke1-vpc
+      url: $(ref.Sample_Networks.spoke1-vpc)
+    - name: demo-spoke2-vpc
+      url: $(ref.Sample_Networks.spoke2-vpc)
+    deleteSpokeDefaultRoutes: true #this will trigger deletion of existing default route from spoke VPCs
+# Explicit dependencies are needed as peerings cannot be created in parallel with custom routes
+# native deployment manager explicit dependencies are nto supported for nested templates, so we need to emulate
+    dependsOn:
+    - demo-hub-external-rt-to-spoke1-via-fgt
+    - demo-hub-external-rt-to-spoke2-via-fgt
+    - demo-hub-internal-rt-1-via-fgt
+
+# This section will deploy an A-P HA cluster of FortiGates in LB sandwich
+- name: My_FortiGate_Cluster
+  type: fgcp-ha-ap-multilb.jinja
+  properties:
+    prefix: demo # optional. defaults to deployment name
+    zones:
+    - us-west1-b
+    - us-west1-c
+    instanceType: e2-standard-4 #optional. defaults to e2-standard-4
+    license: #optional. default: payg
+      type: byol
+# Uncomment the lics section below to refer to your own BYOL licenses
+#      lics:
+#      - lic1.lic
+#      - lic2.lic
+    serialPortEnable: false
+    networks:
+    # Replace vpcLink, subnetLink URLs and adapt ipCidrRange CIDRs for all networks
+    # in this section if reusing this configuration with your existing VPCs
+    - name: hub-external
+      vpcLink: $(ref.Sample_Networks.external-vpc)
+      subnetLink: $(ref.Sample_Networks.external-sb)
+      ipCidrRange: 172.20.0.0/24
+      serviceIPs: # this section triggers creation of ELB and EIP
+      - name: app1
+      routes: # this section triggers creation of ILB
+      - destRange: 172.20.4.0/24
+        name: to-spoke1
+      - destRange: 172.20.5.0/24
+        name: to-spoke2
+    - name: hub-internal
+      vpcLink: $(ref.Sample_Networks.internal-vpc)
+      subnetLink: $(ref.Sample_Networks.internal-sb)
+      ipCidrRange: 172.20.1.0/24
+      routes:
+      - destRange: 0.0.0.0/0
+    - name: hasync
+      vpcLink: $(ref.Sample_Networks.hasync-vpc)
+      subnetLink: $(ref.Sample_Networks.hasync-sb)
+      ipCidrRange: 172.20.2.0/24
+    - name: management
+      vpcLink: $(ref.Sample_Networks.mgmt-vpc)
+      subnetLink: $(ref.Sample_Networks.mgmt-sb)
+      ipCidrRange: 172.20.3.0/24
+      externalIP:
+        name: mgmt
+# Add routes for spoke1 and spoke2 networks to FortiGates internal routing table
+    fwConfig: |
+      config router static
+      edit 11
+      set dst 172.20.4.0/23
+      set device port2
+      set gateway 172.20.1.1
+      next
+      end
+
+
+outputs:
+- name: Temporary Admin Password
+  value: $(ref.My_FortiGate_Cluster.defaultPassword)
+- name: Management IPs
+  value: $(ref.My_FortiGate_Cluster.mgmtPublicIPs)

@@ -1,0 +1,27 @@
+{#
+  This template deploys a sample set of VPC Networks for hosting
+   FortiGate instances. It's used for convenience of the example configs.
+#}
+{% set prefix = properties.prefix|default(env.deployment) %}
+
+resources:
+{% for net in properties.networks %}
+- name: {{ prefix }}-{{ net }}-vpc
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+- name: {{ prefix }}-{{ net }}-sb
+  type: compute.v1.subnetwork
+  properties:
+    region: {{ properties.region }}
+    network: $(ref.{{ prefix }}-{{ net }}-vpc.selfLink)
+    ipCidrRange: 172.20.{{ loop.index0 }}.0/24
+{% endfor %}
+
+outputs:
+{% for net in properties.networks %}
+- name: {{ net }}-vpc
+  value: $(ref.{{ prefix }}-{{ net }}-vpc.selfLink)
+- name: {{ net }}-sb
+  value: $(ref.{{ prefix }}-{{ net }}-sb.selfLink)
+{% endfor %}

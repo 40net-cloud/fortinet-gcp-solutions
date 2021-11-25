@@ -1,0 +1,67 @@
+# This configuration will deploy a High Availability Active-Passive cluster
+# with SDN Connector-based failover and a single IP directly attached to FGT.
+
+# 4 Sample VPC Networks are created before deploying the fortigate cluster
+
+# Replace paths to license1.lic and license2.lic with your real license files
+
+# All resource names will be prefixed with the deployment name.
+
+
+imports:
+- path: ../../../modules-dm/fgcp-ha-ap-sdn.jinja
+  name: fgcp-ha-ap-sdn.jinja
+- path: ../../../../secrets/FGVM04TM21008011.lic
+  name: license1.lic
+- path: ../../../../secrets/FGVM04TM21008012.lic
+  name: license2.lic
+
+# This template is included to simplify creating of demo VPCs. You will not need
+# it if deploying with your existing networks.
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: utils-sample-vpcs.jinja
+
+resources:
+# First, let's create a sample set of VPC Networks with subnets.
+# You will not need it if you re-use this configuration with your VPCs, but
+# remember to modify references in the fortigate-cluster resource below
+- name: Sample_Networks
+  type: utils-sample-vpcs.jinja
+  properties:
+    region: europe-west1
+
+# Now it's time to deploy Fortigates and protect the internalVpc
+# Note how you can skip some properties leaving them to default (e.g. instanceType)
+# and declare only those you want to change (e.g. license)
+- name: fortigate-cluster
+  type: fgcp-ha-ap-sdn.jinja
+  properties:
+    zones:
+    - europe-west1-b
+    - europe-west1-c
+    license:
+      type: byol
+      lics:
+      - license1.lic
+      - license2.lic
+    networks:
+# NOTE: this configuration references VPC and subnets created by the Sample_Networks
+# template and uses URLs included in that template output. You should replace them with URLs of
+# your own networks and subnets. URLs for hasync and mgmt can be skipped to make the template
+# create new VPCs.
+      external:
+        vpc: $(ref.Sample_Networks.external-vpc)
+        subnet: $(ref.Sample_Networks.external-sb)
+        ipCidrRange: 172.20.0.0/24
+      internal:
+        vpc: $(ref.Sample_Networks.internal-vpc)
+        subnet: $(ref.Sample_Networks.internal-sb)
+        ipCidrRange: 172.20.1.0/24
+      hasync:
+        vpc: $(ref.Sample_Networks.hasync-vpc)
+        subnet: $(ref.Sample_Networks.hasync-sb)
+        ipCidrRange: 172.20.2.0/24
+      mgmt:
+        vpc: $(ref.Sample_Networks.mgmt-vpc)
+        subnet: $(ref.Sample_Networks.mgmt-sb)
+        ipCidrRange: 172.20.3.0/24

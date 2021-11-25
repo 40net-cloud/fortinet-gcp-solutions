@@ -1,0 +1,30 @@
+imports:
+- path: fortiids.jinja
+
+resources:
+- name: Fortinet_IDS
+  type: fortiids.jinja
+  properties:
+    sensors:
+      version: 7.0.1
+      machineType: e2-standard-2
+      fortiAnalyzer:
+        address: 35.202.187.77
+        serial: FAZ-VMTM21010508
+    mirroringPolicies:
+    - region: europe-west6
+      target:
+        vpcNetwork: projects/se-projects-242100/global/networks/bm-vpc2
+        tags:
+        - sniffme
+      sensorCount: 1
+    - region: europe-west6
+      target:
+        vpcNetwork: projects/se-projects-242100/global/networks/bm-test-vpc1
+        tags:
+        - sniffme
+    - region: europe-west4
+      target:
+        vpcNetwork: projects/se-projects-242100/global/networks/bm-test-vpc1
+        tags:
+        - sniffme

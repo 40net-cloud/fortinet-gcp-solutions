@@ -1,0 +1,155 @@
+info:
+  title: Fortigate High Availability Active-Passive cluster with floating external IP and route
+  version: 1.1
+
+imports:
+- path: utils-netcalc.jinja
+- path: singlevm.jinja
+
+required:
+- zones
+- region
+- networks
+
+properties:
+  prefix:
+    type: string
+    description: Prefix to be added to all resource names
+  zones:
+    type: array
+    description: Availability zones names list. Use 2 different zones in the same region
+    default:
+    - us-central1-b
+    - us-central1-c
+  instanceType:
+    type: string
+    description: Instance size to be used for FGT VMs
+    default: e2-highcpu-4
+  license:
+    type: object
+    description: Licensing information. properties.type can be "byol" or "payg". For BYOL deployments include lics array pointing to the license files.
+    default:
+      type: payg
+    properties:
+      type:
+        type: string
+        enum: ['payg', 'byol']
+        description: Type of license used. Determines the source image
+      lics:
+        type: array
+        description: Optional array with 2 names of imports containing license files.
+  version:
+    type: string
+    description: Firmware version to deploy.
+    default: 7.0.2
+  networks:
+    type: object
+    description: Indicate VPC Networks and subnets to be used (internal, external, hasync, mgmt). Each network need references to vpc and subnet (vpc and subnet properties) as well as cidr defined. hasync and mgmt are optional and will be created if not provided.
+    properties:
+      external:
+        type: object
+        description: External network definition
+        properties:
+          vpc:
+            type: string
+            description: URL of VPC Network
+          subnet:
+            type: string
+            description: URL of subnet
+          ipCidrRange:
+            type: string
+            description: DICR range of the subnet. If not defined this network interface will be set to DHCP client
+        required:
+        - vpc
+        - subnet
+      internal:
+        type: object
+        description: Internal network definition
+        properties:
+          vpc:
+            type: string
+            description: URL of VPC Network
+          subnet:
+            type: string
+            description: URL of subnet
+          ipCidrRange:
+            type: string
+            description: DICR range of the subnet. If not defined this network interface will be set to DHCP client
+        required:
+        - vpc
+        - subnet
+      hasync:
+        type: object
+        description: HA sync network definition
+        properties:
+          vpc:
+            type: string
+            description: URL of VPC Network
+          subnet:
+            type: string
+            description: URL of subnet
+          ipCidrRange:
+            type: string
+            description: DICR range of the subnet
+        required:
+        - vpc
+        - subnet
+      mgmt:
+        type: object
+        description: Management network definition
+        properties:
+          vpc:
+            type: string
+            description: URL of VPC Network
+          subnet:
+            type: string
+            description: URL of subnet
+          ipCidrRange:
+            type: string
+            description: DICR range of the subnet. If not defined this network interface will be set to DHCP client
+        required:
+        - vpc
+        - subnet
+  multiIpSubnetEnable:
+    type: boolean
+    description: This parameter enables MULTI_IP_SUBNET guest feature. When enabled NICs will be configured with subnet mask. When disabled NICs will be configured with /32 mask and additional routes to connected subnet
+    default: true
+  serviceAccount:
+    type: string
+    description: Service account to be assigned to the instances
+    default: default
+  serialPortEnable:
+    type: boolean
+    description: Enable or disable serial port for instances
+    default: true
+  attachPublicIP:
+    type: boolean
+    description: Set to false for deployments without directly attached public IP
+    default: true
+  forwardedPublicIPs:
+    type: array
+    description: External IP addresses to be created and attached using Protocol Forwarding
+    default: []
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the address. Will be used for resource naming
+        protocols:
+          type: array
+          description: List of protocols to forward. L3_DEFAULT will make failover faster, but it's in preview at the time of writing of this template
+          default: ["TCP","UDP"]
+          items:
+            type: string
+            enum: ["TCP", "UDP", "ESP", "AH", "SCTP", "ICMP", "L3_DEFAULT"]
+  fwConfig:
+    type: string
+    description: Additional configuration to be passed to the firewall
+    default: ""
+  routes:
+    type: array
+    default:
+    - destRange: 0.0.0.0/0
+      name: default
+      priority: 100

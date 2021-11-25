@@ -1,0 +1,22 @@
+info:
+  title: Sample VPC Network set
+  description: "Sample set of 4 VPC Networks for hosting FortiGate clusters created by example configs."
+  version: 1.1
+
+required:
+- region
+
+properties:
+  prefix:
+    type: string
+    description: Prefix to be added to all resource names
+  region:
+    type: string
+    description: Region to create subnets in
+  networks:
+    type: array
+    default:
+    - external
+    - internal
+    - hasync
+    - mgmt
