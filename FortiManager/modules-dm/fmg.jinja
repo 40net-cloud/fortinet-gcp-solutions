@@ -1,0 +1,36 @@
+{% set prefix="fortinet" %}
+{% set region="europe-west3" %}
+{% set zone="europe-west3-c" %}
+{% set networkId="projects/se-projects-242100/global/networks/default" %}
+{% set subnetId="projects/se-projects-242100/regions/europe-west3/subnetworks/default" %}
+
+
+resources:
+- name: {{ prefix }}-fmg-vm
+  type: compute.v1.instance
+  properties:
+    zone: {{ zone }}
+    machineType: zones/{{ zone }}/machineTypes/e2-standard-2
+    disks:
+    - deviceName: {{ prefix }}-fmg-bootdisk
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        diskSizeGb: 10.0
+        sourceImage: https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/families/fortimanager-70
+    - autoDelete: true
+      boot: false
+      deviceName: {{ prefix }}-fmg-logdisk
+      source: $(ref.{{ prefix }}-fmg-logdisk.selfLink)
+      type: PERSISTENT
+    networkInterfaces:
+    - network: {{ networkId }}
+      subnetwork: {{ subnetId }}
+
+
+- name: {{ prefix }}-fmg-logdisk
+  type: compute.v1.disk
+  properties:
+    zone: {{ zone }}
+    diskSizeGb: 100.0
