@@ -9,7 +9,7 @@ resources:
       version: 7.0.1
       machineType: e2-standard-2
       fortiAnalyzer:
-        address: 35.202.187.77
+        address: 35.202.xx.xx
         serial: FAZ-VMTM21010508
     mirroringPolicies:
     - region: europe-west6
