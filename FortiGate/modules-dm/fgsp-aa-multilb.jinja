@@ -1,0 +1,288 @@
+{% set prefix = properties.prefix|default(env.deployment) %}
+{% import "utils-netcalc.jinja" as netcalc %}
+
+{% set region=properties.zones[0].split('-')[0]~'-'~properties.zones[0].split('-')[1] %}
+{% set reservedInterfaces=[3] %}
+
+resources:
+{% for vm in ["Primary", "Secondary"] %}
+{% set vmLoop=loop %}
+- name: Fortigate_{{vm}}
+  type: singlevm2.jinja
+  properties:
+    prefix: {{ prefix }}
+    name: fgt{{ loop.index }}
+    zone: {{ properties.zones[loop.index0]}}
+    instanceType: {{ properties.instanceType }}
+    {% if 0==loop.index0 %}
+    createCloudFirewallRules: true
+    {% else %}
+    createCloudFirewallRules: false
+    {% endif %}
+    license:
+      type: {{ properties.license.type }}
+      {% if ('byol'==properties.license.type) and ("lics" in properties.license)%}
+      lic: {{ properties.license.lics[ loop.index0 ]}}
+      {% endif %}
+    version: {{ properties.version }}
+    serviceAccount: {{ properties.serviceAccount }}
+    serialPortEnable: {{ properties.serialPortEnable }}
+    routes: []
+    networks:
+    {% for nic in properties.networks %}
+    - vpcLink: {{ nic.vpcLink }}
+      subnetLink: {{ nic.subnetLink }}
+      ipCidrRange: {{ nic.ipCidrRange }}
+      networkIP: {{ netcalc.getNthIpWithMask( nic.ipCidrRange, vmLoop.index+nic.addressOffset ) }}
+      {%- if nic.allowaccess %}
+      allowaccess: {{ nic.allowaccess }}
+      {%- endif %}
+      {%- if nic.description %}
+      description: {{ nic.description }}
+      {%- endif %}
+      {% if "externalIP" in nic %}
+      externalIP:
+        name: {{ nic.externalIP.name }}{{ vmLoop.index }}
+      {% endif %}
+      {% if "serviceIPs" in nic %}
+      additionalExternalIPs:
+      {% for serviceIP in nic.serviceIPs %}
+      - name: {{ serviceIP.name }}
+        createAddressAndFwdRule: false
+        address: $(ref.{{ prefix }}-{{ serviceIP.name }}.address)
+        {% if 'description' in serviceIP %}
+        description: {{ serviceIP.description }}
+        {% endif %}
+      {% endfor %}
+      {% endif %}
+    {% endfor %}
+    fwConfig: |
+      config system probe-response
+        set port {{ properties.probePort }}
+        set mode http-probe
+        set http-probe-value OK
+      end
+      config system cluster-sync
+        edit 1
+        {# use port3 for FGSP data sync if available. If not, fallback to port1 #}
+        {%- if properties.networks|length > 2 %}
+        set peerip {{ netcalc.getNthIp( properties.networks[2].ipCidrRange, (loop.index%2)+1+properties.networks[2].addressOffset )}}
+        {%- else %}
+        set peerip {{ netcalc.getNthIp( properties.networks[0].ipCidrRange, (loop.index%2)+1+properties.networks[0].addressOffset )}}
+        {%- endif %}
+        next
+      end
+      config system standalone-cluster
+        set standalone-group-id 1
+        set group-member-id {{ loop.index0 }}
+        set layer2-connection unavailable
+        unset session-sync-dev
+      end
+      config system ha
+        set session-pickup enable
+        set session-pickup-nat enable
+        set session-enable-connectionless enable
+      end
+      config system interface
+      {%- for network in properties.networks %}
+      {%- if not loop.index in reservedInterfaces and not "serviceIPs" in network %}
+      {# for each internal interface add ILB address as secondaryip #}
+        edit port{{ loop.index }}
+        set secondary-IP enable
+        config secondaryip
+          edit 1
+          set ip $(ref.{{ prefix }}-{{ network.name | default( 'net'~loop.index )}}-ilb.IPAddress) 255.255.255.255
+          set allowaccess probe-response
+          next
+        end
+        next
+      {%- elif "serviceIPs" in network %}
+      {# for each internal interface add serviceIPs addresses as secondaryip #}
+        edit port{{ loop.index }}
+        set secondary-IP enable
+        config secondaryip
+        {%- for serviceIP in network.serviceIPs %}
+          edit {{ loop.index+100 }}
+          set ip $(ref.{{ prefix }}-{{ serviceIP.name }}.address) 255.255.255.255
+          set allowaccess probe-response
+          next
+        {%- endfor %}
+        end
+        next
+      {%- endif %}
+      {%- endfor %}
+      end
+      config router static
+      {%- for network in properties.networks %}
+      {%- if not loop.index in reservedInterfaces%}
+      edit 10{{loop.index}}
+        set dst 35.191.0.0/16
+        set device port{{ loop.index }}
+        set gateway {{ netcalc.getNthIp( network.ipCidrRange, 0 )}}
+      next
+      edit 11{{loop.index}}
+        set dst 130.211.0.0/22
+        set device port{{ loop.index }}
+        set gateway {{ netcalc.getNthIp( network.ipCidrRange, 0 )}}
+      next
+      {%- endif %}
+      {%- endfor %}
+      end
+      {{properties.fwConfig | indent(7)}}
+{% endfor%}
+
+
+{% for zoneindx in [0,1] %}
+- name: {{ prefix }}-hagroup{{ zoneindx }}
+  type: compute.v1.instanceGroup
+  properties:
+    zone: {{ properties.zones[ zoneindx ]}}
+- name: {{ prefix }}-hagroup{{zoneindx}}-add
+  action: gcp-types/compute-v1:compute.instanceGroups.addInstances
+  metadata:
+    runtimePolicy:
+    - CREATE
+  properties:
+    zone: {{ properties.zones[ zoneindx ]}}
+    instanceGroup: $(ref.{{ prefix }}-hagroup{{ zoneindx }}.name)
+    instances:
+    - instance: $(ref.{{ prefix }}-fgt{{ loop.index }}.selfLink)
+- name: {{ prefix }}-hagroup{{zoneindx}}-setPort
+  action: gcp-types/compute-v1:compute.instanceGroups.setNamedPorts
+  metadata:
+    runtimePolicy:
+    - CREATE
+  properties:
+    zone: {{ properties.zones[ zoneindx ]}}
+    instanceGroup: $(ref.{{ prefix }}-hagroup{{ zoneindx }}.name)
+    namedPorts:
+    - name: http
+      port: 80
+{% endfor %}
+
+- name: {{ prefix }}-ilb-probe{{ properties.probePort }}
+  type: compute.v1.healthCheck
+  properties:
+    type: HTTP
+    httpHealthCheck:
+      port: {{ properties.probePort }}
+      checkIntervalSec: 5
+      timeoutSec: 3
+      unhealthyThreshold: 2
+      healthyThreshold: 1
+
+{# ILB resources #}
+{% for network in properties.networks %}
+{# reservedInterfaces are used for internal data exchange between fgts. No need for custom routes and ILB #}
+{% if (not loop.index in reservedInterfaces) and not network.public %}
+{# Regional backend service and forwarding rule must be created per VPC #}
+- name: {{ prefix }}-{{ network.name | default( 'net'~loop.index ) }}-lbbes
+  type: compute.v1.regionBackendService
+  properties:
+    region: {{ region }}
+    loadBalancingScheme: INTERNAL
+    network: {{ network.vpcLink }}
+    protocol: TCP
+    healthChecks:
+    - $(ref.{{ prefix }}-ilb-probe{{ properties.probePort }}.selfLink)
+    backends:
+    - group: $(ref.{{ prefix }}-hagroup0.selfLink)
+    - group: $(ref.{{ prefix }}-hagroup1.selfLink)
+- name: {{ prefix }}-{{ network.name | default( 'net'~loop.index )}}-ilb
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ region }}
+    loadBalancingScheme: INTERNAL
+    IPAddress: {{ netcalc.getNthIp( network.ipCidrRange, 3+network.addressOffset )}}
+    IPProtocol: TCP
+    allPorts: true
+    backendService: $(ref.{{ prefix }}-{{ network.name | default( 'net'~loop.index )}}-lbbes.selfLink)
+    network: {{ network.vpcLink }}
+    subnetwork: {{ network.subnetLink }}
+
+{# routes can be parametrized, by default it's just [default] #}
+{% set netloop=loop %}
+{% for route in properties.routes %}
+- name: {{ prefix }}-route-{{ network.name | default( 'net'~netloop.index )}}-{{ route.name }}-via-fgt
+  type: compute.v1.route
+  properties:
+    destRange: {{ route.destRange }}
+    {% if "priority" in route %}
+    priority: {{ route.priority }}
+    {% endif %}
+    network: {{ network.vpcLink }}
+    nextHopIlb: $(ref.{{ prefix }}-{{ network.name | default( 'net'~netloop.index )}}-ilb.selfLink )
+    tags: {{ route.tags | default([])}}
+    description: {{ route.description | default("route via FGT") }}
+{% endfor %}{# for each route #}
+{% endif %}{# not in reservedInterfaces #}
+{% endfor %}{# for each network #}
+
+{% for network in properties.networks if network.public %}
+{# add ELB forwarding rules for each address in serviceIPs #}
+  {% for serviceIP in network.serviceIPs %}
+- name: {{ prefix }}-{{ serviceIP.name }}
+  type: compute.v1.address
+  properties:
+    region: {{ region }}
+    {% if "description" in additionalIP %}
+    description: {{ serviceIP.description }}
+    {% endif %}
+    {% if "networkTier" in additionalIP %}
+    networkTier: {{ additionalIP.networkTier }}
+    {% endif %}
+
+    {% for protocol in ["UDP","TCP"] %}
+- name: {{ prefix }}-{{ serviceIP.name }}-elb-{{ protocol|lower }}
+  type: compute.v1.forwardingRule
+  properties:
+    region: {{ region }}
+    IPAddress: $(ref.{{ prefix }}-{{ serviceIP.name }}.selfLink)
+    IPProtocol: {{ protocol }}
+    portRange: 1-65535
+    target: $(ref.{{ prefix }}-elb-pool.selfLink)
+    loadBalancingScheme: EXTERNAL
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+
+{# additional ELB resources #}
+- name: {{ prefix }}-elb-probe{{ properties.probePort}}
+  type: compute.v1.httpHealthCheck
+  properties:
+    port: {{ properties.probePort }}
+    checkIntervalSec: 5
+    timeoutSec: 3
+    unhealthyThreshold: 2
+    healthyThreshold: 1
+- name: {{ prefix }}-elb-pool
+  type: compute.v1.targetPool
+  properties:
+    region: {{ region }}
+    healthChecks:
+    - $(ref.{{ prefix }}-elb-probe{{ properties.probePort }}.selfLink)
+    instances:
+    - $(ref.{{ prefix }}-fgt1.selfLink)
+    - $(ref.{{ prefix }}-fgt2.selfLink)
+    sessionAffinity: NONE
+
+{# TODO: dodaj nat na port1#}
+- name: {{ prefix }}-cloudnat-router
+  type: compute.v1.router
+  properties:
+    region: {{ region }}
+    network: {{ properties.networks[0].vpcLink }}
+    nats:
+    - name: {{ prefix }}-cloudnat
+      sourceSubnetworkIpRangesToNat: ALL_SUBNETWORKS_ALL_IP_RANGES
+      natIpAllocateOption: AUTO_ONLY
+
+outputs:
+- name: defaultPassword
+  value: $(ref.Fortigate_Primary.defaultPassword)
+{% if "externalIP" in properties.networks[0] %}
+- name: port1PublicIPs
+  value:
+  - $(ref.{{ prefix }}-{{ properties.networks[0].externalIP.name~'1' }}.address)
+  - $(ref.{{ prefix }}-{{ properties.networks[0].externalIP.name~'2' }}.address)
+{% endif %}
