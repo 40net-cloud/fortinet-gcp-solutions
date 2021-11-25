@@ -1,5 +1,5 @@
 imports:
-- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/master/gcp-dm/fortigate/singlevm.jinja
+- path: https://raw.githubusercontent.com/40net-cloud/fortinet-gcp-solutions/v1/gcp-dm/fortigate/singlevm.jinja
   name: singlevm.jinja
 
 resources:
