@@ -2,7 +2,7 @@
 
 By default, Google Compute VM instances network configuration use single-host (/32 net mask) subnets regardless of the subnet CIDR configuration. The internal IP address and routes are assigned to VM using DHCP, but in some cases you might need to configure addresses and routing statically in FortiGate. This document describes configuration of static IP and routing for such requirements.
 
-Note that the way how subnets work can be affected on a per-VM basis during VM deployment using the MULTI_IP_SUBNET guest OS feature described at the end of this article. Some Fortinet templates make use of this feature, so before you continue make sure you know if your deployment uses the MULTI_IP_SUBNET or the standard networking scheme.
+Note that the way how subnets work can be affected on a per-VM basis during VM deployment using the MULTI_IP_SUBNET guest OS feature described at the end of this article. Some Fortinet templates - namely all the deployment manager templates in this repository - make use of this feature by default, so before you continue make sure you know if your deployment uses the MULTI_IP_SUBNET or the standard networking scheme.
 
 ## Changing DHCP to static network configuration
 
@@ -49,67 +49,4 @@ If your FortiGate is accepting connections via a load balancer, you will have to
 
 The ranges used by External Network Load Balancer are already covered by the 0.0.0.0/0 route on the external interface.
 
-## MULTI_IP_SUBNET scheme
-
-MULTI_IP_SUBNET is a “guest OS feature” flag, which can be enabled when creating the VM using
-
-the command line:
-```
-gcloud compute instances create …
-  --guest-os-features MULTI_IP_SUBNET
-```
-
-Deployment Manager template:
-```
-- type: compute.v1.instance
-  properties:
-    disks:
-    - boot: true
-      guestOsFeatures:
-      - type: MULTI_IP_SUBNET
-```
-
-or Terraform.
-
-You can verify if your instance was created using this option by clicking *Equivalent REST* at the bottom of the VM Instance details page or by describing the instance using gcloud command.
-
-MULTI_IP_SUBNET scheme makes it easier to configure routing in FortiGate instances as it allows to use the subnet configuration known from on-premise networks, where the interface IP is configured with subnet’s  full netmask (instead of 255.255.255.255) and static routes configuration in FortiGate is needed only for the CIDRs not directly connected to the firewall.
-
-Sample FortiGate configuration with MULTI_IP_SUBNET:
-```
-config system interface
-  edit port1
-    set mode static
-    set ip 192.168.0.2/24
-  next
-end
-config router static
-  edit 1
-    set dst 0.0.0.0/0
-    set device port1
-    set gateway 192.168.0.1
-  next
-end
-```
-
-Sample FortiGate configuration without MULTI_IP_SUBNET:
-```
-config system interface
-  edit port1
-    set mode static
-    set ip 192.168.0.2/32
-  next
-end
-config router static
-  edit 1
-    set dst 0.0.0.0/0
-    set device port1
-    set gateway 192.168.0.1
-  next
-  edit 2
-    set dst 192.168.0.0/24
-    set device port1
-    set gateway 192.168.0.1
-  next
-end
-```
+See also: [Using MULTI_IP_SUBNET feature](multi_ip_subnet.md)
