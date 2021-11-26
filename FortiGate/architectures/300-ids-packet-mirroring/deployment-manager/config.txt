@@ -1,0 +1,59 @@
+config system interface
+  edit "port2"
+    set ips-sniffer-mode enable
+  next
+end
+config antivirus profile
+  edit "sniffer-profile"
+    set comment "Scan files and monitor viruses."
+    config http
+        set av-scan monitor
+        set outbreak-prevention monitor
+    end
+    config ftp
+        set av-scan monitor
+        set outbreak-prevention monitor
+    end
+    config imap
+        set av-scan monitor
+        set outbreak-prevention monitor
+        set executables virus
+    end
+    config pop3
+        set av-scan monitor
+        set outbreak-prevention monitor
+        set executables virus
+    end
+    config smtp
+        set av-scan monitor
+        set outbreak-prevention monitor
+        set executables virus
+    end
+    config cifs
+        set av-scan monitor
+        set outbreak-prevention monitor
+    end
+  next
+end
+config ips sensor
+  edit "sniffer-profile"
+    set comment "Monitor IPS attacks."
+    config entries
+      edit 1
+        set severity medium high critical
+      next
+    end
+  next
+end
+config firewall sniffer
+  edit 1
+    set logtraffic all
+    set interface "port2"
+    set application-list-status enable
+    set application-list "sniffer-profile"
+    set ips-sensor-status enable
+    set ips-sensor "sniffer-profile"
+    set av-profile-status enable
+    set av-profile "sniffer-profile"
+  next
+end

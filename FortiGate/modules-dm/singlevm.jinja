@@ -1,0 +1,289 @@
+{% if not properties.prefix is defined %}
+{% set prefix=env.deployment %}
+{% else %}
+{% set prefix=properties.prefix %}
+{% endif %}
+
+{% set externalIpName="ext-ip" %}
+
+{% import "utils-netcalc.jinja" as netcalc %}
+{% import "utils-images.jinja" as images %}
+
+{% set firmwareImage=images.getFgtImage( properties.version, properties.license.type ) %}
+
+{% if not properties.name is defined %}
+{% set fgname="fgt" %}
+{% else %}
+{% set fgname=properties.name %}
+{% endif %}
+
+{% if properties.zone is defined %}
+{% set zone=properties.zone %}
+{% else %}
+{% set zone=properties.zones[0] %}
+{% endif %}
+
+resources:
+{% if (not properties.externalIP is defined) and (properties.attachPublicIP) %}
+- name: {{ prefix }}-{{ externalIpName }}
+  type: compute.v1.address
+  properties:
+    region: {{ properties.region }}
+    description: Public IP of Fortigate instance
+{% endif %}
+- name: {{ prefix }}-{{ fgname }}-logdisk
+  type: compute.v1.disk
+  properties:
+    zone: {{ zone }}
+    diskSizeGb: 30.0
+- name: {{ prefix }}-{{ fgname }}
+  type: compute.v1.instance
+  properties:
+    zone: {{ zone }}
+    machineType: zones/{{ zone }}/machineTypes/{{ properties.instanceType }}
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      {% if properties.multiIpSubnetEnable %}
+      guestOsFeatures:
+      - type: MULTI_IP_SUBNET
+      {% endif %}
+      licenses:
+      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
+      initializeParams:
+        sourceImage: {{ firmwareImage }}
+        diskSizeGb: 10.0
+    - deviceName: {{ prefix }}-{{ fgname }}-logdisk
+      source: $(ref.{{ prefix }}-{{ fgname }}-logdisk.selfLink)
+      type: PERSISTENT
+      autoDelete: true
+      boot: false
+    networkInterfaces:
+    - network: {{ properties.networks.external.vpc }}
+      subnetwork: {{ properties.networks.external.subnet }}
+      {% if "networkIP" in properties.networks.external %}
+      networkIP: {{ properties.networks.external.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.external %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.external.ipCidrRange, 1 ) }}
+      {% endif %}
+      {% if properties.attachPublicIP %}
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+        {% if properties.externalIP is defined %}
+        natIP: {{ properties.externalIP.address }}
+        networkTier: {{ properties.externalIP.networkTier }}
+        {% else %}
+        natIP: $(ref.{{ prefix }}-{{ externalIpName }}.address)
+        {% endif %}
+      {% endif %}
+    - network: {{ properties.networks.internal.vpc }}
+      subnetwork: {{ properties.networks.internal.subnet }}
+      {% if "networkIP" in properties.networks.internal %}
+      networkIP: {{ properties.networks.internal.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.internal %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 1 )}}
+      {% endif %}
+    {% if "hasync" in properties.networks and "mgmt" in properties.networks %}
+    - network: {{ properties.networks.hasync.vpc }}
+      subnetwork: {{ properties.networks.hasync.subnet }}
+      {% if "networkIP" in properties.networks.hasync %}
+      networkIP: {{ properties.networks.hasync.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.hasync %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.hasync.ipCidrRange, 1 )}}
+      {% endif %}
+    - network: {{ properties.networks.mgmt.vpc }}
+      subnetwork: {{ properties.networks.mgmt.subnet }}
+      {% if "networkIP" in properties.networks.mgmt %}
+      networkIP: {{ properties.networks.mgmt.networkIP.split('/')[0] }}
+      {% elif "ipCidrRange" in properties.networks.mgmt %}
+      networkIP: {{ netcalc.getNthIp( properties.networks.mgmt.ipCidrRange, 1 )}}
+      {% endif %}
+      accessConfigs:
+      - name: Management
+        type: ONE_TO_ONE_NAT
+    {% endif %}
+    canIpForward: Yes
+    serviceAccounts:
+    - email: {{ properties.serviceAccount }}
+      scopes:
+      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+      - 'https://www.googleapis.com/auth/logging.write'
+      - 'https://www.googleapis.com/auth/monitoring.write'
+      - 'https://www.googleapis.com/auth/compute'
+    metadata:
+      items:
+      - key: serial-port-enable
+        value: "{{ properties.serialPortEnable }}"
+    {% if properties.license.type == "byol" %}
+      - key: license
+        value: |
+          {%- if properties.license.lic is defined %}
+          {{ imports[properties.license.lic] | indent(10) }}
+          {%- else %}
+          {{ imports[properties.license.lics[0]] | indent(10) }}
+          {%- endif %}
+    {% endif %}
+      - key: user-data
+        value: |
+          config system global
+            set hostname "{{ prefix }}-{{ fgname }}"
+          end
+          config system interface
+          {%- if "ipCidrRange" in properties.networks.external or "networkIP" in properties.networks.external %}
+            edit port1
+              set description external
+              set mode static
+              {%- if "networkIP" in properties.networks.external %}
+              set ip {{ properties.networks.external.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.external.ipCidrRange, 1 )}}
+              {%- endif %}
+              set allowaccess ping https ssh fgfm
+              set role wan
+            next
+          {%- endif %}
+          {%- if "ipCidrRange" in properties.networks.internal or "networkIP" in properties.networks.internal %}
+            edit port2
+              set description internal
+              set mode static
+              {%- if "networkIP" in properties.networks.internal %}
+              set ip {{ properties.networks.internal.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.internal.ipCidrRange, 1 )}}
+              {%- endif %}
+              set allowaccess ping
+              set role lan
+            next
+          {%- endif %}
+          {%- if "hasync" in properties.networks and "mgmt" in properties.networks %}
+            {%- if "ipCidrRange" in properties.networks.hasync or "networkIP" in properties.networks.hasync %}
+            edit port3
+              set description hasync
+              set mode static
+              {%- if "networkIP" in properties.networks.hasync %}
+              set ip {{ properties.networks.hasync.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.hasync.ipCidrRange, 1 )}}
+              {%- endif %}
+              set allowaccess ping
+            next
+            {%- endif %}
+            {%- if "ipCidrRange" in properties.networks.mgmt or "networkIP" in properties.networks.mgmt %}
+            edit port4
+              set description management
+              set mode static
+              {%- if "networkIP" in properties.networks.mgmt %}
+              set ip {{ properties.networks.mgmt.networkIP }}
+              {%- else %}
+              set ip {{ netcalc.getNthIpWithMask( properties.networks.mgmt.ipCidrRange, 1 )}}
+              {%- endif %}
+              set allowaccess ping https ssh fgfm
+            next
+            {%- endif %}
+          {%- endif %}
+          end
+          config router static
+          {%- if "ipCidrRange" in properties.networks.external %}
+            edit 1
+              set device port1
+              set gateway {{ netcalc.getNthIp( properties.networks.external.ipCidrRange, 0 )}}
+            next
+          {%- endif %}
+          {%- if "ipCidrRange" in properties.networks.internal %}
+            edit 2
+              set dst 10.0.0.0/8
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
+              set distance 100
+            next
+            edit 3
+              set dst 192.168.0.0/16
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
+              set distance 100
+            next
+            edit 4
+              set dst 172.16.0.0/12
+              set device port2
+              set gateway {{ netcalc.getNthIp( properties.networks.internal.ipCidrRange, 0 )}}
+              set distance 100
+            next
+          {%- endif %}
+          end
+          config system sdn-connector
+            edit "gcp_conn"
+            set type gcp
+          next
+          end
+          {{ properties.fwConfig | indent(10) }}
+    tags:
+      items:
+       - {{prefix}}-fgt
+       - fortigate
+
+{% if properties.createCloudFirewallRules %}
+- name: {{ prefix }}-allow-internet-to-fgt
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.networks.external.vpc }}
+    priority: 100
+    sourceRanges:
+    - 0.0.0.0/0
+    targetTags:
+    - {{prefix}}-fgt
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+    - IPProtocol: ESP
+    - IPProtocol: AH
+- name: {{ prefix }}-allow-all-internal
+  type: compute.v1.firewall
+  properties:
+    network: {{ properties.networks.internal.vpc }}
+    priority: 200
+    sourceRanges:
+    - 0.0.0.0/0
+    allowed:
+    - IPProtocol: TCP
+    - IPProtocol: UDP
+    - IPProtocol: ICMP
+    - IPProtocol: ESP
+    - IPProtocol: AH
+- name: {{ prefix }}-fgt-route-direct
+  type: compute.v1.route
+  properties:
+    network: {{ properties.networks.external.vpc }}
+    destRange: 0.0.0.0/0
+    nextHopGateway: projects/{{ env.project }}/global/gateways/default-internet-gateway
+    priority: 10
+    tags:
+    - {{ prefix }}-fgt
+{% endif %}
+{% for route in properties.routes %}
+- name: {{ prefix }}-{{ route.name | default( "route"~loop.index~"-via-fgt" ) }}
+{# NOTE: route naming scheme referred in ha-ap.jinja line 171 #}
+  type: compute.v1.route
+  properties:
+    network: {{ properties.networks.internal.vpc }}
+    destRange: {{ route.destRange }}
+    nextHopIp: $(ref.{{ prefix }}-{{ fgname }}.networkInterfaces[1].networkIP)
+    priority: {{ route.priority | default(1000) }}
+    tags: {{ route.tags | default([])}}
+    description: {{ route.description | default("route via FGT") }}
+{% endfor %}
+
+outputs:
+{% if properties.attachPublicIP %}
+- name: Public_IP
+  {% if properties.externalIP is defined %}
+  value: {{ properties.externalIP.address }}
+  {% else %}
+  value: $(ref.{{ prefix }}-{{ externalIpName }}.address)
+  {% endif %}
+{% endif %}
+- name: defaultPassword
+  value: $(ref.{{ prefix }}-{{ fgname }}.id)

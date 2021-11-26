@@ -1,0 +1,57 @@
+resources:
+{% for spoke in properties.spokes %}
+{% set spokeName = spoke.name | default(spoke.url.split( "/" ) | last) %}
+
+{% if properties.deleteSpokeDefaultRoutes %}
+{# NOTE: this code will break if default route was already deleted and deleteDefaultROutes is set to true #}
+- name: {{ spokeName }}-listDefaultRoutes
+  action: gcp-types/compute-v1:compute.routes.list
+  properties:
+    filter: (destRange="0.0.0.0/0") AND (network="{{ spoke.url }}")
+- name: {{ spokeName }}-deleteDefaultRoute
+  action: gcp-types/compute-v1:compute.routes.delete
+  metadata:
+    runtimePolicy:
+    - CREATE
+  properties:
+    route: $(ref.{{ spokeName }}-listDefaultRoutes.items[0].name)
+{% endif %}
+
+
+- name: {{ properties.prefix }}-peer-{{ spokeName }}-to-hub
+  action: gcp-types/compute-v1:compute.networks.addPeering
+  properties:
+    network: {{ spokeName }}
+    networkPeering:
+      name: {{ properties.prefix }}-peer-{{ spokeName }}-to-hub
+      network: {{ properties.hub.url }}
+      exchangeSubnetRoutes: true
+      importCustomRoutes: true
+  metadata:
+    runtimePolicy:
+    - CREATE
+    dependsOn:
+    {% if properties.deleteSpokeDefaultRoutes %}
+    - {{ spokeName }}-deleteDefaultRoute
+    {% endif %}
+    {% if not loop.first %}
+    - {{ properties.prefix }}-peer-hub-to-{{ properties.spokes[loop.index0-1].name | default(properties.spokes[loop.index0-1].url.split('/') | last) }}
+    {% endif %}
+    {% for dependency in properties.dependsOn %}
+    - {{dependency}}
+    {% endfor %}
+- name: {{ properties.prefix }}-peer-hub-to-{{ spokeName }}
+  action: gcp-types/compute-v1:compute.networks.addPeering
+  properties:
+    network: {{ properties.hub.name | default(properties.hub.url.split( '/' ) | last) }}
+    networkPeering:
+      name: {{ properties.prefix }}-peer-hub-to-{{ spokeName }}
+      network: {{ spoke.url }}
+      exchangeSubnetRoutes: true
+      exportCustomRoutes: true
+  metadata:
+    runtimePolicy:
+    - CREATE
+    dependsOn:
+    - {{ properties.prefix }}-peer-{{ spokeName }}-to-hub
+{% endfor %}

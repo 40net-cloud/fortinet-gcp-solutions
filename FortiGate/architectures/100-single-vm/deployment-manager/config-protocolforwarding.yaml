@@ -1,0 +1,56 @@
+imports:
+- path: ../../../modules-dm/singlevm2.jinja
+  name: singlevm2.jinja
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: sample-vpcs.jinja
+- path: ../../../../secrets/FGVM04TM21008011.lic
+  name: byol.lic
+
+resources:
+# First call the helper tempalate to create 2 VPC Networks with 2 subnets
+- name: Sample_Networks
+  type: sample-vpcs.jinja
+  properties:
+    region: europe-west1
+    prefix: fgt-demo-singlevm2
+    networks:
+    - external
+    - internal
+
+# Next, let's deploy a FortiGate instance with network interfaces in 2 VPCs we created above
+- name: Fortigate
+  type: singlevm2.jinja
+  properties:
+    zone: europe-west1-b
+    prefix: fgt-demo-singlevm2
+    license:
+      type: byol
+      lic: byol.lic
+    networks:
+    - name: ext
+      vpcLink: $(ref.Sample_Networks.external-vpc)
+      subnetLink: $(ref.Sample_Networks.external-sb)
+      ipCidrRange: 172.20.0.0/24
+      additionalExternalIPs:
+      - name: addr1
+      - name: addr2
+      - name: addr3
+    - name: int
+      vpcLink: $(ref.Sample_Networks.internal-vpc)
+      subnetLink: $(ref.Sample_Networks.internal-sb)
+      ipCidrRange: 172.20.1.0/24
+# Without a public IP assigned to port1 the instance will not be able to communicate with Internet
+# (and we will not be able to connect to it), so let's assign 1st of the additionalExternalIPs
+# as FortiGate's primary address on port1. The others can be added as secondaryip or simply used as VIPs.
+    fwConfig: |
+      config sys interface
+        edit port1
+          set ip $(ref.fgt-demo-singlevm2-addr1.address) 255.255.255.255
+        next
+      end
+
+outputs:
+- name: singlevm2_template
+  value: $(ref.Fortigate)
+- name: addr1
+  value: $(ref.fgt-demo-singlevm2-addr1.address)

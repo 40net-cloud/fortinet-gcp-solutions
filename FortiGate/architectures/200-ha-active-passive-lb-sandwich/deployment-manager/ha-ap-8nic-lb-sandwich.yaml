@@ -1,0 +1,94 @@
+imports:
+- path: ../../../modules-dm/fgcp-ha-ap-multilb.jinja
+  name: fgcp-ha-ap-multilb.jinja
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: sample-vpcs.jinja
+
+resources:
+# Create a sample set of VPC Networks with subnets
+- name: Sample_Networks
+  type: sample-vpcs.jinja
+  properties:
+    region: us-west1
+    networks:
+    - external
+    - lan1
+    - hasync
+    - mgmt
+    - lan2
+    - lan3
+    - lan4
+    - lan5
+
+- name: Fortigate_Cluster
+  type: fgcp-ha-ap-multilb.jinja
+  properties:
+    zones:
+    - us-west1-b
+    - us-west1-c
+    instanceType: e2-standard-8
+    license: #optional. default: payg
+      type: byol
+    version: 7.0.2 #optional
+    serialPortEnable: false
+    networks: #define ALL the connected networks here. By convention the order is External, Internal, Heartbeat, Management, additional
+    - name: external
+      vpcLink: $(ref.Sample_Networks.external-vpc)
+      subnetLink: $(ref.Sample_Networks.external-sb)
+      ipCidrRange: 172.20.0.0/24
+      serviceIPs: # this section triggers creation of ELB and EIP
+      - name: app1
+      routes: # this section triggers creation of ILB
+      - destRange: 172.20.1.0/24
+        name: rt-to-internal
+    - name: lan1
+      vpcLink: $(ref.Sample_Networks.lan1-vpc)
+      subnetLink: $(ref.Sample_Networks.lan1-sb)
+      ipCidrRange: 172.20.1.0/24
+      routes:
+      - destRange: 0.0.0.0/0
+        name: default
+    - name: hasync
+      vpcLink: $(ref.Sample_Networks.hasync-vpc)
+      subnetLink: $(ref.Sample_Networks.hasync-sb)
+      ipCidrRange: 172.20.2.0/24
+    - name: management
+      vpcLink: $(ref.Sample_Networks.mgmt-vpc)
+      subnetLink: $(ref.Sample_Networks.mgmt-sb)
+      ipCidrRange: 172.20.3.0/24
+      externalIP: # define externalIP to have public IPs bound directly to firewalls (e.g. for management)
+        name: mgmt
+    - name: lan2
+      vpcLink: $(ref.Sample_Networks.lan2-vpc)
+      subnetLink: $(ref.Sample_Networks.lan2-sb)
+      ipCidrRange: 172.20.4.0/24
+      routes:
+      - destRange: 0.0.0.0/0
+        name: default
+    - name: lan3
+      vpcLink: $(ref.Sample_Networks.lan3-vpc)
+      subnetLink: $(ref.Sample_Networks.lan3-sb)
+      ipCidrRange: 172.20.5.0/24
+      routes:
+      - destRange: 0.0.0.0/0
+        name: default
+    - name: lan4
+      vpcLink: $(ref.Sample_Networks.lan4-vpc)
+      subnetLink: $(ref.Sample_Networks.lan4-sb)
+      ipCidrRange: 172.20.6.0/24
+      routes:
+      - destRange: 0.0.0.0/0
+        name: default
+    - name: lan5
+      vpcLink: $(ref.Sample_Networks.lan5-vpc)
+      subnetLink: $(ref.Sample_Networks.lan5-sb)
+      ipCidrRange: 172.20.7.0/24
+      routes:
+      - destRange: 0.0.0.0/0
+        name: default
+
+outputs:
+- name: Temporary Admin Password
+  value: $(ref.Fortigate_Cluster.defaultPassword)
+- name: Management IPs
+  value: $(ref.Fortigate_Cluster.mgmtPublicIPs)

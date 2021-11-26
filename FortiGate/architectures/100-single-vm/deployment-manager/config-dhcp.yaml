@@ -1,0 +1,34 @@
+imports:
+- path: ../../../modules-dm/singlevm2.jinja
+  name: singlevm2.jinja
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: sample-vpcs.jinja
+
+resources:
+# First call the helper tempalate to create 2 VPC Networks with 2 subnets
+- name: Sample_Networks
+  type: sample-vpcs.jinja
+  properties:
+    region: europe-west1
+    networks:
+    - external
+    - internal
+
+# Next, let's deploy a FortiGate instance with network interfaces in 2 VPCs we created above
+- name: Fortigate
+  type: singlevm2.jinja
+  properties:
+    zone: europe-west1-b
+    networks:
+    - name: ext
+      vpcLink: $(ref.Sample_Networks.external-vpc)
+      subnetLink: $(ref.Sample_Networks.external-sb)
+      externalIP:
+        name: ext-ip
+    - name: int
+      vpcLink: $(ref.Sample_Networks.internal-vpc)
+      subnetLink: $(ref.Sample_Networks.internal-sb)
+
+outputs:
+- name: singlevm2_template
+  value: $(ref.Fortigate)

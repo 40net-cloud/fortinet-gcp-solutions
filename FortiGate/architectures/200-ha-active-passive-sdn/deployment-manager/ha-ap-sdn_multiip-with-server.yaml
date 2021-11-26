@@ -1,0 +1,165 @@
+# This configuration will deploy a High Availability Active-Passive cluster with SDN Connector-based failover
+# FGTs are provisioned with an example config and a simple web server (vm-demo-server)
+# is added in the internal network.
+
+# 4 Sample VPC Networks are created before deploying the fortigate cluster
+
+# Uncomment fgtdemo-efr-addr1-tcp in line ~130 with your deployment name to make
+# demo web server provision in correct order
+# Replace paths to license1.lic and license2.lic with your real license files
+
+imports:
+- path: ../../../modules-dm/fgcp-ha-ap-sdn.jinja
+  name: fgcp-ha-ap-sdn.jinja
+- path: ../../../../secrets/FGVM04TM21008011.lic
+  name: license1.lic
+- path: ../../../../secrets/FGVM04TM21008012.lic
+  name: license2.lic
+
+# This template is included to simplify creating of demo VPCs. You will not need
+# it if deploying with your existing networks.
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: utils-sample-vpcs.jinja
+
+resources:
+# First, let's create a sample set of VPC Networks with subnets.
+# You will not need it if you re-use this configuration with your VPCs, but
+# remember to modify references in the fortigate-cluster resource below
+- name: Sample_Networks
+  type: utils-sample-vpcs.jinja
+  properties:
+    region: europe-west1
+
+# Now it's time to deploy Fortigates and protect the internalVpc
+# Note how you can skip some properties leaving them to default (e.g. instanceType)
+# and declare only those you want to change (e.g. license)
+- name: fortigate-cluster
+  type: fgcp-ha-ap-sdn.jinja
+  properties:
+    zones:
+    - europe-west1-b
+    - europe-west1-c
+    license:
+      type: byol
+      lics:
+      - license1.lic
+      - license2.lic
+    networks:
+# NOTE: this configuration references VPC and subnets created by the Sample_Networks
+# template and uses URLs included in that template output. You should replace them with URLs of
+# your own networks and subnets. URLs for hasync and mgmt can be skipped to make the template
+# create new VPCs.
+      external:
+        vpc: $(ref.Sample_Networks.external-vpc)
+        subnet: $(ref.Sample_Networks.external-sb)
+        ipCidrRange: 172.20.0.0/24
+      internal:
+        vpc: $(ref.Sample_Networks.internal-vpc)
+        subnet: $(ref.Sample_Networks.internal-sb)
+        ipCidrRange: 172.20.1.0/24
+      hasync:
+        vpc: $(ref.Sample_Networks.hasync-vpc)
+        subnet: $(ref.Sample_Networks.hasync-sb)
+        ipCidrRange: 172.20.2.0/24
+      mgmt:
+        vpc: $(ref.Sample_Networks.mgmt-vpc)
+        subnet: $(ref.Sample_Networks.mgmt-sb)
+        ipCidrRange: 172.20.3.0/24
+    attachPublicIP: false #disables directly attached EIP
+# Let's add 2 EIPs using protocol forwarding. Template by default will forward TCP and UDP but
+# you can modify it and tell it to forward eg. only ICMP
+    forwardedPublicIPs:
+    - name: addr1
+    - name: addr2
+      protocols:
+      - ICMP
+# fgcp-ha-ap-sdn.jinja template allows you to easily inject the initial
+# FortiGate configuration using fwConfig property
+    fwConfig: |
+      config firewall vip
+        edit "demoserv-tcp80"
+        set extintf "port1"
+        set mappedip "172.20.1.10"
+        set portforward enable
+        set extport 80
+        set mappedport 80
+      end
+      config firewall policy
+        edit 2
+          set name "allowall-internal-out"
+          set srcintf "port2"
+          set dstintf "port1"
+          set srcaddr "all"
+          set dstaddr "all"
+          set service "ALL"
+          set action accept
+          set schedule "always"
+          set logtraffic all
+          set utm-status enable
+          set ssl-ssh-profile "certificate-inspection"
+          set application-list "default"
+          set av-profile "default"
+          set webfilter-profile "default"
+          set nat enable
+          set ippool enable
+          set poolname "addr1"
+        next
+        edit 3
+          set name "demoserv-tcp80-allow"
+          set srcintf "port1"
+          set dstintf "port2"
+          set srcaddr "all"
+          set dstaddr "demoserv-tcp80"
+          set service "ALL"
+          set action accept
+          set schedule "always"
+          set logtraffic all
+          set utm-status enable
+          set ssl-ssh-profile "certificate-inspection"
+          set ips-sensor "default"
+          set av-profile "default"
+        next
+      end
+
+# Finally, let's deploy a simple demo web server, which will be reacheable
+# via attached service IPs configured as VIPs in FortiGate
+- name: vm-demo-server
+  type: compute.v1.instance
+  metadata:
+    dependsOn:
+#    - fgtdemo-efr-addr1-tcp
+  properties:
+    zone: europe-west1-b
+    machineType: zones/europe-west1-b/machineTypes/f1-micro
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          apt update
+          apt install wget nginx -y
+          cd /var/www/html
+          wget -N https://raw.githubusercontent.com/bartekmo/play2/master/html/1.html
+          wget -N https://raw.githubusercontent.com/bartekmo/play2/master/html/mark-blue.png
+          wget -N https://raw.githubusercontent.com/bartekmo/play2/master/html/mark-purple.png
+          wget -N https://raw.githubusercontent.com/bartekmo/play2/master/html/top-right.png
+          wget -N https://raw.githubusercontent.com/bartekmo/play2/master/html/xperts-logo.png
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        diskName: disk-demo-server
+        sourceImage: https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-2004-lts
+    networkInterfaces:
+    - network: $(ref.Sample_Networks.internal-vpc)
+      subnetwork: $(ref.Sample_Networks.internal-sb)
+      networkIP: 172.20.1.10
+
+
+# Note:
+# configuration and template files can also output values. Here you can see how
+# to easily display your Fortigate public IP and default password:
+outputs:
+- name: Fortigate Template Outputs
+  value: $(ref.fortigate-cluster)

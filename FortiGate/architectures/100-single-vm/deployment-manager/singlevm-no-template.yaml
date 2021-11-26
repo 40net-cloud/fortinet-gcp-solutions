@@ -1,0 +1,59 @@
+# This standalone YAML file creates a 2-nic FortiGate instance with a log disk
+# It illustrates the basic components of FortiGate instance in GCP for those
+# wishing to build their own templates from scratch.
+
+# As it is a YAML config file (in contrary to jinja templates) it does not
+# allow any variables and parametrization.
+
+resources:
+- name: fgt-logdisk
+  type: compute.v1.disk
+  properties:
+    zone: europe-west6-b
+    diskSizeGb: 30.0
+- name: fgt-vm
+  type: compute.v1.instance
+  properties:
+    zone: europe-west6-b
+    machineType: zones/europe-west6-b/machineTypes/e2-standard-2
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+## Uncomment 2 lines below to use MULTI_IP_SUBNET subnet scheme instead of default /32 mask
+#      guestOsFeatures:
+#      - type: MULTI_IP_SUBNET
+      licenses:
+      - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
+      initializeParams:
+        sourceImage: https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgt-701-20210721-001-w-license
+        diskSizeGb: 10.0
+    - deviceName: fgt-logdisk
+      source: $(ref.fgt-logdisk.selfLink)
+      type: PERSISTENT
+      autoDelete: true
+      boot: false
+    networkInterfaces:
+    - network: global/networks/external-vpc
+      subnetwork: regions/europe-west6/subnetworks/external-sb
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    - network: global/networks/internal-vpc
+      subnetwork: regions/europe-west6/subnetworks/internal-sb
+    canIpForward: Yes
+    serviceAccounts:
+    - email: default
+      scopes:
+      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+      - 'https://www.googleapis.com/auth/compute'
+    metadata:
+      items:
+      - key: serial-port-enable
+        value: true
+      - key: user-data
+        value: |
+          config sys global
+            set hostname "fgt-vm"
+          end

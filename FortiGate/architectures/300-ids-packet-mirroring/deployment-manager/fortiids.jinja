@@ -1,0 +1,260 @@
+{% set prefix="bm" %}
+{% set deployment=properties.deploymentName | default(env.deployment) %}
+{% set firmwareImage="https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/images/fortinet-fgtondemand-701-20210721-001-w-license" %}
+
+{% set regionsDone=[] %}
+{% set vpcsDone=[] %}
+{% set peersDone=[] %}
+
+resources:
+- name: {{prefix}}-vpc-{{deployment}}-mgmt
+  type: gcp-types/compute-v1:networks
+  properties:
+    autoCreateSubnetworks: false
+- name: {{prefix}}-vpc-{{deployment}}-sink
+  type: gcp-types/compute-v1:networks
+  properties:
+    autoCreateSubnetworks: false
+
+- name: {{prefix}}-fw-{{deployment}}-sink-allowall
+  type: gcp-types/compute-v1:firewalls
+  properties:
+    network: $(ref.{{prefix}}-vpc-{{deployment}}-sink.selfLink)
+    allowed:
+    - IPProtocol: all
+    direction: INGRESS
+    targetTags:
+    - fgt
+
+- name: {{prefix}}-hc-{{deployment}}-tcp8008
+  type: gcp-types/compute-v1:healthChecks
+  properties:
+    description: Dummy healthcheck for FGT sniffer interface. Will always fail but is required by BES
+    type: TCP
+    timeoutSec: 300
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    checkIntervalSec: 300
+    tcpHealthCheck:
+      port: 8008
+
+
+{#  Process input data to lists of unique regions and VPC Networks
+
+ #  As policies are unique to network+region pair, both networks and
+ #  regions might be repeated multiple times in different policies
+ #  while resources cannot.
+ #}
+{% set regions=[] %}
+{% set networks=[] %}
+{% for policy in properties.mirroringPolicies %}
+  {% if not policy.region in regions %}
+    {% set dummy=regions.append( policy.region ) %}
+  {% endif %}
+  {% if not policy.target.vpcNetwork in networks %}
+    {% set dummy=networks.append( policy.target.vpcNetwork ) %}
+  {% endif %}
+{% endfor %}
+
+{# This macro sums explicitly declared sensor counts per region to define instance group size #}
+{% macro countSensors( region, properties ) -%}
+{% if properties.mirroringPolicies|selectattr('region', 'equalto', region)|selectattr('sensorCount')|list|length==0 -%}
+{{ properties.sensors.defaultSensorCount }}
+{%- else -%}
+{{ properties.mirroringPolicies|selectattr('region', 'equalto', region)|selectattr('sensorCount') | sum(attribute='sensorCount')}}
+{%- endif %}
+{%- endmacro %}
+
+
+{# Create resources unique to regions #}
+{% for currRegion in regions %}
+- name: {{prefix}}-sb-{{deployment}}-mgmt-{{currRegion}}
+  type: gcp-types/compute-v1:subnetworks
+  properties:
+    region: {{ currRegion }}
+    network: $(ref.{{prefix}}-vpc-{{deployment}}-mgmt.selfLink)
+    ipCidrRange: {{properties.sensors.subnetBase.split(".")[0]}}.{{properties.sensors.subnetBase.split(".")[1]}}.{{loop.index0}}.0/25
+- name: {{prefix}}-sb-{{deployment}}-sink-{{currRegion}}
+  type: gcp-types/compute-v1:subnetworks
+  properties:
+    region: {{ currRegion }}
+    network: $(ref.{{prefix}}-vpc-{{deployment}}-sink.selfLink)
+    ipCidrRange: {{properties.sensors.subnetBase.split(".")[0]}}.{{properties.sensors.subnetBase.split(".")[1]}}.{{loop.index0}}.128/25
+
+- name: {{prefix}}-vmt-{{deployment}}-{{currRegion}}
+  type: compute.v1.instanceTemplate
+  properties:
+    description: FortiGate instance template
+    properties:
+      machineType: {{properties.sensors.machineType}}
+      networkInterfaces:
+      - network: $(ref.{{prefix}}-vpc-{{deployment}}-mgmt.selfLink)
+        subnetwork: $(ref.{{prefix}}-sb-{{deployment}}-mgmt-{{currRegion}}.selfLink)
+        name: Management interface
+        {#
+        accessConfigs:
+        - type: ONE_TO_ONE_NAT
+        #}
+      - network: $(ref.{{prefix}}-vpc-{{deployment}}-sink.selfLink)
+        subnetwork: $(ref.{{prefix}}-sb-{{deployment}}-sink-{{currRegion}}.selfLink)
+        name: Monitoring interface
+      disks:
+      - deviceName: boot
+        type: PERSISTENT
+        boot: true
+        autoDelete: true
+        licenses:
+        - https://www.googleapis.com/compute/v1/projects/fortigcp-project-001/global/licenses/fortigate
+        initializeParams:
+          sourceImage: {{ firmwareImage }}
+          diskSizeGb: 10.0
+      serviceAccounts:
+      - email: default
+        scopes:
+        {#}
+        - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+        - 'https://www.googleapis.com/auth/logging.write'
+        - 'https://www.googleapis.com/auth/monitoring.write'
+        - 'https://www.googleapis.com/auth/compute'
+        {#}
+      tags:
+        items:
+        - fgt
+        - fortigate
+      metadata:
+        items:
+        - key: user-data
+          value: |
+            config log fortianalyzer setting
+              set status enable
+              set server "{{properties.sensors.fortiAnalyzer.address}}"
+              set serial "{{properties.sensors.fortiAnalyzer.serial}}"
+              set upload-option realtime
+            end
+            {{ imports['config.txt'] | indent(12)}}
+
+- name: {{prefix}}-mig-{{deployment}}-{{ currRegion }}
+  type: compute.v1.regionInstanceGroupManager
+  properties:
+    region: {{ currRegion }}
+    instanceTemplate: $(ref.{{prefix}}-vmt-{{deployment}}-{{currRegion}}.selfLink)
+    baseInstanceName: {{prefix}}-fgt-{{deployment}}
+    targetSize: {{ countSensors(currRegion, properties) }}
+
+- name: {{prefix}}-rtr-{{deployment}}-mgmt-{{currRegion}}
+  type: gcp-types/compute-v1:routers
+  properties:
+    region: {{ currRegion }}
+    network: $(ref.{{prefix}}-vpc-{{deployment}}-mgmt.selfLink)
+    nats:
+    - name: {{ prefix }}-nat-{{deployment}}-mgmt-{{currRegion}}
+      sourceSubnetworkIpRangesToNat: ALL_SUBNETWORKS_ALL_IP_RANGES
+      natIpAllocateOption: AUTO_ONLY
+
+- name: {{prefix}}-bes-{{deployment}}-{{currRegion}}
+  type: compute.v1.regionBackendService
+  properties:
+    region: {{currRegion}}
+    network: $(ref.{{prefix}}-vpc-{{deployment}}-sink.selfLink)
+    loadBalancingScheme: INTERNAL
+    backends:
+    - group: $(ref.{{prefix}}-mig-{{deployment}}-{{currRegion}}.instanceGroup)
+    healthChecks:
+    - $(ref.{{prefix}}-hc-{{deployment}}-tcp8008.selfLink)
+- name: {{prefix}}-ifr-{{deployment}}-{{currRegion}}
+  type: compute.beta.forwardingRule
+  properties:
+    region: {{currRegion}}
+    isMirroringCollector: true
+    loadBalancingScheme: INTERNAL
+    allPorts: true
+    backendService: $(ref.{{prefix}}-bes-{{deployment}}-{{currRegion}}.selfLink)
+    network: $(ref.{{prefix}}-vpc-{{deployment}}-sink.selfLink)
+    subnetwork: $(ref.{{prefix}}-sb-{{deployment}}-sink-{{currRegion}}.selfLink)
+{% endfor %}
+
+{# once for each VPC #}
+{% for currVpc in networks %}
+
+- name: {{prefix}}-peer-{{deployment}}-{{currVpc.split('/') | last }}-to-sink
+  action: gcp-types/compute-v1:compute.networks.addPeering
+  properties:
+    network: {{ currVpc.split('/') | last }}
+    networkPeering:
+      name: {{prefix}}-peer-{{deployment}}-{{currVpc.split('/') | last }}-to-sink
+      network: $(ref.{{prefix}}-vpc-{{deployment}}-sink.selfLink)
+      exchangeSubnetRoutes: true
+  metadata:
+    runtimePolicy:
+    - CREATE
+    {% if loop.index0>0 %}
+    dependsOn:
+    - {{prefix}}-peer-{{deployment}}-sink-to-{{networks[ loop.index0-1 ].split('/') | last }}
+    {% endif %}
+
+- name: {{prefix}}-peer-{{deployment}}-sink-to-{{currVpc.split('/') | last }}
+  action: gcp-types/compute-v1:compute.networks.addPeering
+  properties:
+    network: {{prefix}}-vpc-{{deployment}}-sink
+    networkPeering:
+      name: {{prefix}}-peer-{{deployment}}-sink-to-{{currVpc.split('/') | last }}
+      network: {{ currVpc }}
+      exchangeSubnetRoutes: true
+  metadata:
+    runtimePolicy:
+    - CREATE
+    dependsOn:
+    - {{prefix}}-vpc-{{deployment}}-sink
+    - {{prefix}}-peer-{{deployment}}-{{currVpc.split('/') | last }}-to-sink
+
+{% endfor %}
+
+{# once for each mirroring policy #}
+{% for mirpol in properties.mirroringPolicies %}
+- name: {{prefix}}-pmir-{{deployment}}-{{ mirpol.target.vpcNetwork.split('/') | last }}-{{ mirpol.region }}
+  type: gcp-types/compute-beta:packetMirrorings
+  properties:
+    name: {{prefix}}-pmir-{{deployment}}-{{ mirpol.target.vpcNetwork.split('/') | last }}-{{ mirpol.region }}
+    region: {{ mirpol.region }}
+    network:
+      url: {{ mirpol.target.vpcNetwork }}
+    collectorIlb:
+      url: $(ref.{{prefix}}-ifr-{{deployment}}-{{ mirpol.region }}.selfLink)
+    mirroredResources:
+    {% if "subnetworks" in mirpol.target %}
+      subnetworks:
+      {% for sb in mirpol.target.subnetworks %}
+      - url: {{ sb }}
+      {% endfor %}
+    {% endif %}
+    {% if "tags" in mirpol.target %}
+      tags:
+      {% for tag in mirpol.target.tags %}
+      - {{ tag }}
+      {% endfor %}
+    {% endif %}
+    {% if "instances" in mirpol.target %}
+      instances:
+      {% for instance in mirpol.target.instances %}
+      - url: {{ instance }}
+      {% endfor %}
+    {% endif %}
+    {% if "filter" in mirpol %}
+    filter:
+    {% if "cidrRanges" in mirpol.filter %}
+      cidrRanges:
+      {% for cidrRange in mirpol.filter.cidrRanges %}
+      - {{ cidrRange }}
+      {% endfor %}
+    {% endif %}
+    {% if "IPProtocols" in mirpol.filter %}
+      IPProtocols:
+      {% for proto in mirpol.filter.IPProtocols %}
+      - {{ proto }}
+      {% endfor %}
+    {% endif %}
+    {% if "direction" in mirpol.filter %}
+      direction: {{ mirpol.filter.direction }}
+    {% endif %}
+    {% endif %}
+{% endfor %}
