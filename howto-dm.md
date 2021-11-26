@@ -38,3 +38,10 @@ imports:
 ```
 
 Remember to use link to the file itself (raw.githubusercontent.com) and not the link to GitHub page describing the file.
+
+
+## Cleaning up
+In order to destroy all resources in a given Deployment Manager deployment, issue the following command:
+```
+gcloud deployment-manager deployments delete DEPLOYMENT_NAME
+```
