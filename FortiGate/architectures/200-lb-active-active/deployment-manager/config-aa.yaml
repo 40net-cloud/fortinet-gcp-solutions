@@ -1,0 +1,61 @@
+# This example Deployment Manager configuration file demonstrates deployment
+# of a Fortigate Active-Active FGSP cluster with multiple external IP addresses.
+
+imports:
+- path: ../../../modules-dm/fgsp-aa-multilb.jinja
+  name: fgsp-aa-multilb.jinja
+- path: ../../../modules-dm/utils-sample-vpcs.jinja
+  name: sample-vpcs.jinja
+
+resources:
+# Create a sample set of VPC Networks with subnets
+- name: Sample_Networks
+  type: sample-vpcs.jinja
+  properties:
+    region: us-west1
+    networks:
+    - external
+    - internal
+    - datasync
+
+# Now it's time to deploy the firewalls. The only obligatory properties is zone
+# (region is calculated automatically) and the networks.
+# externalIP property in the first network is optional, but omitting it requires
+# internal connectivity for management.
+
+# additionalExternalIPs can be used for forwarding connections to additional
+# services. IP pools and address objects are auto-created by template, but
+# VIPs and firewall rules have to be configured after deployment manually.
+
+- name: My_Fortigate_Cluster
+  type: fgsp-aa-multilb.jinja
+  properties:
+    zones:
+    - us-west1-b
+    - us-west1-c
+    license:
+      type: byol
+    networks:
+    - name: external
+      vpcLink: $(ref.Sample_Networks.external-vpc)
+      subnetLink: $(ref.Sample_Networks.external-sb)
+      ipCidrRange: 172.20.0.0/24
+      public: true
+      serviceIPs:
+      - name: app1
+      - name: app2
+      externalIP:
+        name: fgt-mgmt
+    - name: protected
+      vpcLink: $(ref.Sample_Networks.internal-vpc)
+      subnetLink: $(ref.Sample_Networks.internal-sb)
+      ipCidrRange: 172.20.1.0/24
+    - name: datasync
+      vpcLink: $(ref.Sample_Networks.datasync-vpc)
+      subnetLink: $(ref.Sample_Networks.datasync-sb)
+      ipCidrRange: 172.20.2.0/24
+
+# To make our lives easier, let's pass public IP and default password from template outputs
+outputs:
+- name: template_output
+  value: $(ref.My_Fortigate_Cluster)

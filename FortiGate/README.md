@@ -39,6 +39,11 @@ This design is subject to 99.99% GCP Compute SLA.
 <img width="700px" src="https://lucid.app/publicSegments/view/09e00569-7fab-4e9f-92f1-de8fd9148623/image.png" alt="FortiGate A-P HA with SDN Connector">
 </p>
 
+### [Active-Active FGSP group](architectures/200-lb-active-active)
+Active-Active designs base on multiple appliances actively processing streams of data. In the public cloud this architecture differs from active-active on-prem deployments of physical FortiGates because of the cloud network limitations. Unlike on-prem, you cannot use FGCP protocol (unicast FGCP supports only 2 peers in active-passive configuration) and you're left with FGSP.
+
+![](https://lucid.app/publicSegments/view/e9c7ba47-30ae-43aa-b32a-bba738bedf9d/image.png)
+
 ### [IDS with Packet Mirroring](ids-packet-mirroring/)
 FortiGate virtual appliances are capable of detecting and blocking threats using the FortiLabs-powered IDS/IPS system as well as the built-in antivirus engine. While it is recommended to deploy FortiGates inline, so the threats can be blocked as soon as they are detected, it is not possible to do so for the network traffic inside a Google Cloud VPC Network. In this case, one can utilize GCP Packet Mirroring feature together with FortiGate one-arm-sniffer mode to detect malicious or infected traffic and alert the administrators. For multiple sensors it's best to use FortiAnalyzer as the correlation and aggregation engine providing single pane of glass insights into the traffic patterns as well as detected threats or compromised VMs.
 
