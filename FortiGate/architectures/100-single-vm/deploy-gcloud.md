@@ -60,6 +60,7 @@ gcloud compute instances create my-fortigate --zone=$ZONE \
 Route traffic from internal VPC via FortiGate by creating a custom default route:
 ```
 gcloud compute routes create default-via-my-fortigate \
+  --network=$VPC_INT_NAME \
   --destination-range="0.0.0.0/0" \
   --next-hop-instance=my-fortigate \
   --next-hop-instance-zone=$ZONE \
