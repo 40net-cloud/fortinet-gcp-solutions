@@ -40,7 +40,7 @@ This design is subject to 99.99% GCP Compute SLA.
 </p>
 
 ### [Active-Active FGSP group](architectures/200-lb-active-active)
-Active-Active designs base on multiple appliances actively processing streams of data. In the public cloud this architecture differs from active-active on-prem deployments of physical FortiGates because of the cloud network limitations. Unlike on-prem, you cannot use FGCP protocol (unicast FGCP supports only 2 peers in active-passive configuration) and you're left with FGSP.
+Active-Active design uses multiple appliances actively processing streams of data. Load balancers are used in front of each interface group to dispatch the traffic and detect unhealthy instances. Flow asymmetry impairing threat inspection can be mitigated using source NAT or FGSP L3 UTM sync feature. Connections forwarded without inspection are handled using FGSP session sync feature. Note that crash of any of the group members will cause drops of some of the existing connections.
 
 ![](https://lucid.app/publicSegments/view/e9c7ba47-30ae-43aa-b32a-bba738bedf9d/image.png)
 
@@ -48,9 +48,6 @@ Active-Active designs base on multiple appliances actively processing streams of
 FortiGate virtual appliances are capable of detecting and blocking threats using the FortiLabs-powered IDS/IPS system as well as the built-in antivirus engine. While it is recommended to deploy FortiGates inline, so the threats can be blocked as soon as they are detected, it is not possible to do so for the network traffic inside a Google Cloud VPC Network. In this case, one can utilize GCP Packet Mirroring feature together with FortiGate one-arm-sniffer mode to detect malicious or infected traffic and alert the administrators. For multiple sensors it's best to use FortiAnalyzer as the correlation and aggregation engine providing single pane of glass insights into the traffic patterns as well as detected threats or compromised VMs.
 
 ### [Network Connectivity Center](network-connectivity-center/)
-/upcoming/
-
-### [Active-Active HA](ha-active-active/)
 /upcoming/
 
 ## Choosing HA Architecture

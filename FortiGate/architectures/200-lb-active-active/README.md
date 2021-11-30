@@ -19,3 +19,6 @@ Note that session and UTM syncing using FGSP does NOT support configuration sync
 While this design can be deployed with multiple internal load balancers on multiple interfaces, the standard deployment includes one external load balancer connected to port1 and one internal load balancer connected to port2. For best performance - especially when leveraging L3 UTM scan feature - we recommend using a dedicated port3 for FGSP communication.
 
 ![Active-Active Details diagram](https://lucid.app/publicSegments/view/8e53be59-2ff5-4bb3-90aa-0d2ed6833dad/image.png)
+
+## How to deploy
+- [with Deployment Manager](deployment-manager/)
