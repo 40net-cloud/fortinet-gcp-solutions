@@ -24,15 +24,14 @@ GCP limitations related to deployment of multi-NIC instances make the usual arch
 ## Other Architectures
 
 ### [Single VM](architectures/100-single-vm/)
-This single FortiGate VM will process all the traffic and as such become a single point of failure during operations as well as upgrades. This block can also be used in an architecture with multiple regions where a FortiGate is deployed in each region.
-Single instance is subject to 99.5% GCP compute SLA.
+A single FortiGate VM will process all the traffic. This design introduces a single point of failure, which will make some operations (e.g. upgrades) disruptive. Also, due to lower SLA (99.5%) it's rarely used as a standalone solution in production. This design can be used though as a building block for more advanced architectures.
 
 ![FGT Single VM details](https://lucid.app/publicSegments/view/4e56ef05-671c-47f3-a2cd-65cca6185f20/image.png)
 
 ### [Active-Passive HA Cluster with SDN Connector Failover](architectures/200-ha-active-passive-sdn/)
 This design deploys 2 FortiGate VMs in 2 zones and preconfigure an Active/Passive cluster using unicast FGCP HA protocol. FGCP synchronizes the configuration and session table. One (directly) or more (using Protocol Forwarding) External IP addresses can be assigned to the cluster. On failover the newly active FortiGate takes control and issues API calls to GCP Compute API to shift the External IPs and update the route(s) to itself. Shifting the EIPs and routes takes about 30 seconds, but preserves existing connections.
 
-Multiple IPs are available in this design with FortiGate version 7.0.2 and later.
+Note: multiple IPs are available in this design with FortiGate version 7.0.2 and later.
 This design is subject to 99.99% GCP Compute SLA.
 
 <p align="center">
@@ -46,6 +45,7 @@ Active-Active design uses multiple appliances actively processing streams of dat
 
 ### [IDS with Packet Mirroring](ids-packet-mirroring/)
 FortiGate virtual appliances are capable of detecting and blocking threats using the FortiLabs-powered IDS/IPS system as well as the built-in antivirus engine. While it is recommended to deploy FortiGates inline, so the threats can be blocked as soon as they are detected, it is not possible to do so for the network traffic inside a Google Cloud VPC Network. In this case, one can utilize GCP Packet Mirroring feature together with FortiGate one-arm-sniffer mode to detect malicious or infected traffic and alert the administrators. For multiple sensors it's best to use FortiAnalyzer as the correlation and aggregation engine providing single pane of glass insights into the traffic patterns as well as detected threats or compromised VMs.
+![](https://lucid.app/publicSegments/view/5ac9e8fb-7f7f-4077-81e8-2c1e4dc6cf51/image.png)
 
 ### [Network Connectivity Center](network-connectivity-center/)
 /upcoming/
