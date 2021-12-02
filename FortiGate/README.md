@@ -40,8 +40,11 @@ This design is subject to 99.99% GCP Compute SLA.
 
 ### [Active-Active FGSP group](architectures/200-lb-active-active)
 Active-Active design uses multiple appliances actively processing streams of data. Load balancers are used in front of each interface group to dispatch the traffic and detect unhealthy instances. Flow asymmetry impairing threat inspection can be mitigated using source NAT or FGSP L3 UTM sync feature. Connections forwarded without inspection are handled using FGSP session sync feature. Note that crash of any of the group members will cause drops of some of the existing connections.
+![Active-Active overview diagram](https://lucid.app/publicSegments/view/e9c7ba47-30ae-43aa-b32a-bba738bedf9d/image.png)
 
-![](https://lucid.app/publicSegments/view/e9c7ba47-30ae-43aa-b32a-bba738bedf9d/image.png)
+### [Autoscaling](architetures/300-autoscaling)
+![Autoscaling solution diagram](https://lucid.app/publicSegments/view/884fb7b6-2dcf-421f-92cb-2eb489f8ef9c/image.png)
+
 
 ### [IDS with Packet Mirroring](ids-packet-mirroring/)
 FortiGate virtual appliances are capable of detecting and blocking threats using the FortiLabs-powered IDS/IPS system as well as the built-in antivirus engine. While it is recommended to deploy FortiGates inline, so the threats can be blocked as soon as they are detected, it is not possible to do so for the network traffic inside a Google Cloud VPC Network. In this case, one can utilize GCP Packet Mirroring feature together with FortiGate one-arm-sniffer mode to detect malicious or infected traffic and alert the administrators. For multiple sensors it's best to use FortiAnalyzer as the correlation and aggregation engine providing single pane of glass insights into the traffic patterns as well as detected threats or compromised VMs.
