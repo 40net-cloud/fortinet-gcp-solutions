@@ -24,6 +24,8 @@ Image families available at the time of writing:
 * fortigate-64-payg
 * fortimanager-70
 * fortianalyzer-70
+* fortigate-70-byol
+* fortigate-70-payg
 * fortigate-70 (DO NOT USE)
 
 ### Using image family with gcloud
