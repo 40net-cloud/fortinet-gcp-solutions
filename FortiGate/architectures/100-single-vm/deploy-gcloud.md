@@ -14,7 +14,7 @@ You also must know the following values:
 1. URL of image you're going to deploy (see [below](#how-to-find-the-image) for more details)
 1. zone where you want to create your FortiGate VM
 
-to not get lost, it's a good idea to save these values in shell variables. See the example below:
+it's a good idea to save these values in shell variables. See the example below:
 
 ```
 VPC_EXT_NAME=vpc-external
@@ -138,6 +138,9 @@ gcloud compute forwarding-rules create my-fwd-rule \
   --ip-protocol=TCP \
   --ports=ALL
 ```
+
+### SDN Connector account
+If you plan to use dynamic address objects with SDN Connector please read also [this article](../../docs/sdn_privileges.md)
 
 ## How to find the image
 You can either deploy one of the official images published by Fortinet or create your own image with disk image downloaded from [support.fortinet.com](https://support.fortinet.com). We recommend you use official images unless you need to deploy a custom image.
