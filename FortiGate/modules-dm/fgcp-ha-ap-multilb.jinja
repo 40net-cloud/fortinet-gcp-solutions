@@ -120,7 +120,9 @@ resources:
       {%- endfor %}
       end
       config router static
-      {%- for network in properties.networks if "routes" in network %}
+      {%- for network in properties.networks %}
+      {# do NOT concatenate "for" with "if" or you'll break index #}
+      {%- if "routes" in network %}
       edit 10{{loop.index}}
         set dst 35.191.0.0/16
         set device port{{ loop.index }}
@@ -131,6 +133,7 @@ resources:
         set device port{{ loop.index }}
         set gateway {{ netcalc.getNthIp( network.ipCidrRange, 0 )}}
       next
+      {%- endif %}
       {%- endfor %}
       end
       {{properties.fwConfig | indent(7)}}
