@@ -197,6 +197,8 @@ resources:
     backends:
     - group: $(ref.{{ prefix }}-hagroup0.selfLink)
     - group: $(ref.{{ prefix }}-hagroup1.selfLink)
+    connectionTrackingPolicy:
+      connectionPersistenceOnUnhealthyBackends: NEVER_PERSIST
 - name: {{ prefix }}-{{ network.name | default( 'net'~loop.index )}}-ilb
   type: compute.v1.forwardingRule
   properties:
@@ -236,6 +238,8 @@ resources:
     backends:
     - group: $(ref.{{ prefix }}-hagroup0.selfLink)
     - group: $(ref.{{ prefix }}-hagroup1.selfLink)
+    connectionTrackingPolicy:
+      connectionPersistenceOnUnhealthyBackends: NEVER_PERSIST
 
 {# add ELB forwarding rules for each address in serviceIPs #}
   {% for serviceIP in network.serviceIPs %}
