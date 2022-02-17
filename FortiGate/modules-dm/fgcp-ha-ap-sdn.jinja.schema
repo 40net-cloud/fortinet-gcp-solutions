@@ -41,7 +41,7 @@ properties:
   version:
     type: string
     description: Firmware version to deploy.
-    default: 7.0.2
+    default: 7.0.5
   networks:
     type: object
     description: Indicate VPC Networks and subnets to be used (internal, external, hasync, mgmt). Each network need references to vpc and subnet (vpc and subnet properties) as well as cidr defined. hasync and mgmt are optional and will be created if not provided.
