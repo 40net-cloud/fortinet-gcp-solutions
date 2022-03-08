@@ -19,7 +19,7 @@ This part of the repository is use-case centric. It was created to help you matc
 * [How to deploy](#how-to-deploy)
 
 ## Architecture
-The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up tp 3) load balancers to direct the traffic flows:
+The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up tp 3) load balancers to direct the traffic flows (a pattern known as "load balancer sandwich"):
 ![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview.png)
 
 [Read more about the reference architecture design and best practices](base.md)
@@ -28,6 +28,8 @@ The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP clust
 ### Protecting public services (ingress N-S inspection)
 
 FortiGate instances empowered by FortiGuard services can be used to secure your workloads running in the cloud against any bad actors accessing them from the Internet. Publishing your services via FortiGate allows you to not only scan traffic against malicious payload, but also provide granular access rules or enforce ZTNA policies.
+
+![Inbound scanning overview diagram](../../docs/img/fgt-ref-inbound-overview.png)
 
 To publish a service via FortiGate the following components are used:
 - new public IP address and external network load balancer in GCP
@@ -40,6 +42,8 @@ Although the workloads could be deployed directly into trusted VPC, they are usu
 
 FortiGate is a great choice to replace the Cloud NAT service. You can easily regulate Internet access based on VM metadata and grant very selective access to services while adding AV scanning on top to make sure your workloads remain healthy.
 
+![Outbound scanning overview diagram](../../docs/img/fgt-ref-outbound-overview.png)
+
 To enable Internet access the following changes are added:
 - internal load balancer as next-hop for the custom static route
 - FortiGate IP Pool object and an outbound firewall policy
@@ -50,6 +54,8 @@ ELB forwarding rules are used to bind public addresses to the FortiGate cluster,
 ### Segmentation for multi-tier infrastructure (E-W inspection)
 
 East-west inspection in GCP can be provided only for traffic between VPC Networks (not inside a network), thus each security zone needs to be created as a separate VPC. Traffic between all workload VPCs properly peered to the FortiGate trusted VPC will be inspected by FortiGate VMs.
+
+![Segmentation overview diagram](../../docs/img/fgt-ref-segmentation-overview.png)
 
 To enable east-west scanning use VPC peering with custom route export/import.
 
