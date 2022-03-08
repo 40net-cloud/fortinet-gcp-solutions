@@ -7,6 +7,17 @@ This part of the repository is use-case centric. It was created to help you matc
 - *Deployment Manager* - although Deployment Manager supports adding custom APIs, it is not a commonly used feature. DM templates in this repo deploy all functionality as part of Day 0 bootstrapping. Updating the DM deployment will NOT result in any changes to the FortiGate configuration.
 - *gcloud* - deployment using Google Cloud CLI is provided as a large script. Parts of FortiGate configuration related to use-cases is added after the base deployment using SSH. Removing or changing of configuration is not part of the provided example script, but can be easily scripted by administrators.
 
+### Shortcuts
+* [Architecture](#architecture)
+* [Supported Use-Cases](#supported-use-cases)
+    - [Protecting public services (ingress N-S inspection)](#protecting-public-services-ingress-n-s-inspection)
+    - [Secure NAT Gateway (outbound N-S inspection)](#secure-nat-gateway-outbound-n-s-inspection)
+    - [Segmentation for multi-tier infrastructure (E-W inspection)](#segmentation-for-multi-tier-infrastructure-e-w-inspection)
+    - [ Secure Hybrid Cloud (IPS for Interconnect)](#secure-hybrid-cloud-ips-for-interconnect)
+    - [Private Service Connect](#private-service-connect)
+    - [SD-WAN / Remote Access](#sd-wan--remote-access)
+* [How to deploy](#how-to-deploy)
+
 ## Architecture
 The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up tp 3) load balancers to direct the traffic flows:
 ![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview.png)
@@ -63,7 +74,7 @@ This solution uses set of custom routes and load balancers to direct traffic fro
 
 Providing access to remote users as well as from micro, small and large offices using VPN, SD-WAN or ZTNA technologies is one of the most common use-cases for FortiGates in the public cloud. This use-case follows the same setup as the Ingress N-S Inspection and does not have dedicated templates or deployment scripts.
 
-## How To Deploy...
+## How To Deploy
 * [using Terraform](terraform/)
 * [using Deployment Manager](deployment-manager/)
 * [using Google Cloud CLI](gcloud/)
