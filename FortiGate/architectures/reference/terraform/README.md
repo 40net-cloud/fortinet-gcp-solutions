@@ -3,7 +3,7 @@
 
 This repo contains terraform modules to deploy and manage FortiGate reference architecture in Google Cloud. It uses both Google Cloud as well as FortiOS providers to demonstrate high agility of managing FortiGate appliances together with cloud using IaC approach.
 
-![Reference architecture overview](https://lucid.app/publicSegments/view/076586e7-f57f-4117-8a64-4b41810d3bc3/image.png)
+![Reference architecture overview](../../../docs/img/fgt-ref-overview2.png)
 
 The templates are split into [day0](day0/) and [day1](day1/) folders, which should be deployed as separate configurations.
 

@@ -20,7 +20,7 @@ This part of the repository is use-case centric. It was created to help you matc
 
 ## Architecture
 The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up tp 3) load balancers to direct the traffic flows (a pattern known as "load balancer sandwich"):
-![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview.png)
+![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview2.png)
 
 [Read more about the reference architecture design and best practices](base.md)
 
