@@ -29,7 +29,10 @@ resource "google_compute_instance" "websrv" {
     subnetwork = var.wrkld_subnet
   }
 
-  metadata_startup_script = "apt update && apt install nginx -y"
+  metadata_startup_script = <<EOT
+  apt update && apt install nginx -y
+  echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' > /var/www/html/eicar.com
+  EOT
 }
 
 output "network_ip" {
