@@ -1,16 +1,21 @@
+# Find the public image to be used for deployment. Modify this block if you want to use
+# an image different than the newest 7.0 BYOL series.
 data "google_compute_image" "fgt_image" {
-  project = "fortigcp-project-001"
-  family  = "fortigate-70-byol"
+  project         = "fortigcp-project-001"
+  family          = "fortigate-70-byol"
 }
 
+# Pull information about subnets we will connect to FortiGate instances. Subnets must
+# already exist (can be created in parent module).
 data "google_compute_subnetwork" "subnets" {
-  count = length(var.subnets)
-  name = var.subnets[count.index]
-  region = var.region
+  count           = length(var.subnets)
+  name            = var.subnets[count.index]
+  region          = var.region
 }
 
+# Pull default zones and the service account. Both can be overridden in variables if needed.
 data "google_compute_zones" "zones_in_region" {
-  region         = var.region
+  region          = var.region
 }
 
 data "google_compute_default_service_account" "default" {
@@ -18,19 +23,29 @@ data "google_compute_default_service_account" "default" {
 
 locals {
   zones = [
-    var.zones[0] != "" ? var.zones[0] : data.google_compute_zones.zones_in_region.names[0],
-    var.zones[1] != "" ? var.zones[1] : data.google_compute_zones.zones_in_region.names[1]
+    var.zones[0]  != "" ? var.zones[0] : data.google_compute_zones.zones_in_region.names[0],
+    var.zones[1]  != "" ? var.zones[1] : data.google_compute_zones.zones_in_region.names[1]
   ]
 }
 
+# We'll use shortened region and zone names for some resource names. This is a standard shorting described in
+# GCP security foundations.
 locals {
-  region_short   = replace( replace( replace( replace(var.region, "europe-", "eu"), "australia", "au" ), "northamerica", "na"), "southamerica", "sa")
-  zones_short    = [
+  region_short    = replace( replace( replace( replace(var.region, "europe-", "eu"), "australia", "au" ), "northamerica", "na"), "southamerica", "sa")
+  zones_short     = [
     replace( replace( replace( replace(local.zones[0], "europe-", "eu"), "australia", "au" ), "northamerica", "na"), "southamerica", "sa"),
     replace( replace( replace( replace(local.zones[1], "europe-", "eu"), "australia", "au" ), "northamerica", "na"), "southamerica", "sa")
   ]
 }
 
+# Create new random API key to be provisioned in FortiGates.
+resource "random_string" "api_key" {
+  length                 = 30
+  special                = false
+  number                 = true
+}
+
+# Create FortiGate instances with secondary logdisks and configuration. Everything 2 times (active + passive)
 resource "google_compute_disk" "logdisk" {
   count                  = 2
 
@@ -40,14 +55,50 @@ resource "google_compute_disk" "logdisk" {
   zone                   = local.zones[count.index]
 }
 
-resource "random_string" "api_key" {
-  length                 = 30
-  special                = false
-  number                 = true
-}
+locals {
+  config_active          = templatefile("${path.module}/fgt-base-config.tpl", {
+    hostname               = "${var.prefix}vm-${local.zones_short[0]}"
+    unicast_peer_ip        = google_compute_address.hasync_priv[1].address
+    unicast_peer_netmask   = cidrnetmask(data.google_compute_subnetwork.subnets[2].ip_cidr_range)
+    ha_prio                = 1
+    healthcheck_port       = var.healthcheck_port
+    api_key                = random_string.api_key.result
+    ext_ip                 = google_compute_address.ext_priv[0].address
+    ext_gw                 = data.google_compute_subnetwork.subnets[0].gateway_address
+    int_ip                 = google_compute_address.int_priv[0].address
+    int_gw                 = data.google_compute_subnetwork.subnets[1].gateway_address
+    int_cidr               = data.google_compute_subnetwork.subnets[0].ip_cidr_range
+    hasync_ip              = google_compute_address.hasync_priv[0].address
+    mgmt_ip                = google_compute_address.mgmt_priv[0].address
+    mgmt_gw                = data.google_compute_subnetwork.subnets[3].gateway_address
+    ilb_ip                 = google_compute_address.ilb.address
+    api_acl                = var.api_acl
+  })
 
+  config_passive         = templatefile("${path.module}/fgt-base-config.tpl", {
+    hostname               = "${var.prefix}vm-${local.zones_short[1]}"
+    unicast_peer_ip        = google_compute_address.hasync_priv[0].address
+    unicast_peer_netmask   = cidrnetmask(data.google_compute_subnetwork.subnets[2].ip_cidr_range)
+    ha_prio                = 0
+    healthcheck_port       = var.healthcheck_port
+    api_key                = random_string.api_key.result
+    ext_ip                 = google_compute_address.ext_priv[1].address
+    ext_gw                 = data.google_compute_subnetwork.subnets[0].gateway_address
+    int_ip                 = google_compute_address.int_priv[1].address
+    int_gw                 = data.google_compute_subnetwork.subnets[1].gateway_address
+    int_cidr               = data.google_compute_subnetwork.subnets[0].ip_cidr_range
+    hasync_ip              = google_compute_address.hasync_priv[1].address
+    mgmt_ip                = google_compute_address.mgmt_priv[1].address
+    mgmt_gw                = data.google_compute_subnetwork.subnets[3].gateway_address
+    ilb_ip                 = google_compute_address.ilb.address
+    api_acl                = var.api_acl
+  })
+
+}
+/*
 data "template_file" "configs" {
   count                  = 2
+
   template               = file("${path.module}/fgt-base-config.tpl")
   vars = {
     hostname             = "${var.prefix}vm${count.index+1}-${local.zones_short[count.index]}"
@@ -65,9 +116,10 @@ data "template_file" "configs" {
     mgmt_ip              = google_compute_address.mgmt_priv[count.index].address
     mgmt_gw              = data.google_compute_subnetwork.subnets[3].gateway_address
     ilb_ip               = google_compute_address.ilb.address
+#    api_acl              = "aa"
   }
 }
-
+*/
 resource "google_compute_instance" "fgt-vm" {
   count                  = 2
 
@@ -92,7 +144,8 @@ resource "google_compute_instance" "fgt-vm" {
   }
 
   metadata = {
-    user-data            = data.template_file.configs[count.index].rendered
+#    user-data            = data.template_file.configs[count.index].rendered
+    user-data            = (count.index == 0 ? local.config_active : local.config_passive )
     license              = fileexists(var.license_files[count.index]) ? file(var.license_files[count.index]) : null
   }
 
@@ -117,7 +170,8 @@ resource "google_compute_instance" "fgt-vm" {
   }
 } //fgt-vm
 
-# ILB resources
+
+# Common Load Balancer resources
 resource "google_compute_region_health_check" "health_check" {
   name                   = "${var.prefix}healthcheck-http${var.healthcheck_port}-${local.region_short}"
   region                 = var.region
@@ -137,6 +191,7 @@ resource "google_compute_instance_group" "fgt-umigs" {
   instances              = [google_compute_instance.fgt-vm[count.index].self_link]
 }
 
+# Resources building Internal Load Balancer
 resource "google_compute_region_backend_service" "ilb_bes" {
   provider               = google-beta
   name                   = "${var.prefix}bes-ilb-trust-${local.region_short}"

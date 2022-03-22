@@ -11,9 +11,11 @@ config system api-user
     set api-key ${api_key}
     set accprofile "prof_admin"
     config trusthost
+    %{ for cidr in api_acl ~}
       edit 0
-        set ipv4-trusthost 188.95.144.226 255.255.255.254
+        set ipv4-trusthost ${cidr}
       next
+    %{ endfor ~}
     end
   next
 end

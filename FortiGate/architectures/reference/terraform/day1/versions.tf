@@ -22,7 +22,7 @@ provider "fortios" {
 # TODO: automatically find which peer is primary at the moment of deployment
 #       for now we just go to he first instance
 
-  hostname  = data.terraform_remote_state.base.outputs.fgt-vm-eip[0]
+  hostname  = data.terraform_remote_state.base.outputs.fgt-mgmt-eips[0]
   token     = data.terraform_remote_state.base.outputs.api-key
   insecure  = "true"
 }
