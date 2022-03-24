@@ -1,5 +1,4 @@
-# FortiGate reference architecture for GCP
-## Deployment and management using Terraform
+# FortiGate reference architecture for GCP - Terraform
 
 This repo contains terraform modules to deploy and manage FortiGate reference architecture in Google Cloud. It uses both Google Cloud as well as FortiOS providers to demonstrate high agility of managing FortiGate appliances together with cloud using IaC approach.
 

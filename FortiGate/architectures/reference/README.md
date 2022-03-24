@@ -20,7 +20,7 @@ This part of the repository is use-case centric. It was created to help you matc
 
 ## Architecture
 The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up tp 3) load balancers to direct the traffic flows (a pattern known as "load balancer sandwich"):
-![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview2.png)
+![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview3.png)
 
 [Read more about the reference architecture design and best practices](base.md)
 
@@ -34,7 +34,7 @@ FortiGate instances empowered by FortiGuard services can be used to secure your 
 To publish a service via FortiGate the following components are used:
 - new public IP address and external network load balancer in GCP
 - VIP and firewall policy in FortiGate
-- internal load balancer and a static sutom route to handle return flow
+- internal load balancer and a static custom route to handle return flow
 
 Although the workloads could be deployed directly into trusted VPC, they are usually placed in separate VPC (often in a different project), which is peered with trusted. You can use simple or shared VPCs for hosting workloads.
 
@@ -79,6 +79,8 @@ This solution uses set of custom routes and load balancers to direct traffic fro
 ### SD-WAN / Remote Access
 
 Providing access to remote users as well as from micro, small and large offices using VPN, SD-WAN or ZTNA technologies is one of the most common use-cases for FortiGates in the public cloud. This use-case follows the same setup as the Ingress N-S Inspection and does not have dedicated templates or deployment scripts.
+
+VPN tunnels should be built towards ELB public IP address, which is to be added as secondary IP to the port1 interface.
 
 ## How To Deploy
 * [using Terraform](terraform/)
