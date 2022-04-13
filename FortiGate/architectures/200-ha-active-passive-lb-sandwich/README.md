@@ -13,7 +13,7 @@ FortiGate Clustering Protocol (FGCP) natively does not work in L3 overlay networ
 As cloud networks do not allow any network mechanisms below IP layer (e.g. gratuitous arp) usually used in HA scenarios, this template adds a pair of load balancers and configures health probes to detect currently active instance. Passive peer will be detected as unhealthy by the load balancers and will not receive any traffic. External load balancer is configured to forward all UDP and all TCP ports, while internal load balancer is used as a next hop in the custom route (note that despite using a single port in the ILB, it will route all UDP, TCP and ICMP traffic).
 
 ## Active-Passive HA Design Options Comparison
-Read [here](../README.md#choosing-ha-architecture) more about differences between different HA designs in Google Cloud.
+Read [here](../../README.md#choosing-ha-architecture) more about differences between different HA designs in Google Cloud.
 
 ## Diagram
 As unicast FGCP clustering of FortiGate instances requires dedicated heartbeat and management NICs, 2 additional VPC Networks need to be created (or indicated in configuration file). This design features 4 separate VPCs for external, internal, heartbeat and management NICs. Both instances are deployed in separate zones indicated in **zones** property to enable GCP 99.99% SLA.
@@ -51,4 +51,4 @@ All VPC Networks already created before deployment and provided to the template 
 - [using Terrform](terraform/)
 
 ## See also
-[Other FortiGate designs](../README.md)
+[Other FortiGate designs](../../README.md)
