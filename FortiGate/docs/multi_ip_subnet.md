@@ -1,5 +1,7 @@
 ## MULTI_IP_SUBNET scheme
 
+**Note: this article is obsoleted as the functionality to add Guest OS Features was removed from gcloud and terraform. Adding guestOsFeatures flags is now supported only for creating new compute images.**
+
 MULTI_IP_SUBNET is a “guest OS feature” flag, which can be enabled when creating the VM using
 
 the command line:
