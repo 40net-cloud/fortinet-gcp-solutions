@@ -116,6 +116,6 @@ resource "google_compute_instance" "wrkld_websrv" {
   metadata_startup_script = <<EOT
 apt update;
 apt -y install nginx
-echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*' > /var/www/html/eicar.com
+echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' > /var/www/html/eicar.com
 EOT
 }
