@@ -11,3 +11,13 @@ variable "vpc_project" {
 variable "day0" {
   description = "Common output from day0 base FortiGate deployment"
 }
+
+variable "spoke_self_link" {
+  type = string
+  default = null
+}
+
+variable "spoke_ip_cidr_ranges" {
+  type = set(string)
+  default = []
+}
