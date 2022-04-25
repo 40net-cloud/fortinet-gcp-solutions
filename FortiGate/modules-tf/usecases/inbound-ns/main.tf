@@ -106,7 +106,7 @@ resource "fortios_firewall_vip" "vip" {
   extip = google_compute_address.elb_eip.address
   portforward = "enable"
   extport = var.targets[count.index].port
-  mappedport = var.targets[count.index].port
+  mappedport = var.targets[count.index].mappedport
 
   mappedip {
     range = var.targets[count.index].ip
@@ -116,8 +116,8 @@ resource "fortios_firewall_vip" "vip" {
 resource "fortios_firewallservice_custom" "service" {
   count = length(var.targets)
 
-  name = "${var.srv_name}-tcp${var.targets[count.index].port}"
-  tcp_portrange = var.targets[count.index].port
+  name = "${var.srv_name}-tcp${var.targets[count.index].mappedport}"
+  tcp_portrange = var.targets[count.index].mappedport
 }
 
 resource "fortios_firewall_policy" "vip_allow" {

@@ -7,8 +7,9 @@ variable targets {
   type = list(object({
     ip = string
     port = number
+    mappedport = number
     }))
-  description = "List of target IP and port pairs for creating DNATs on FortiGate."
+  description = "List of target IP and port tuples for creating DNATs on FortiGate."
 }
 
 variable day0 {
