@@ -2,7 +2,7 @@
 
 Reference architecture for FortiGate in GCP presents the recommended way to configure FortiGate VM instances and Google Cloud infrastructure. It is designed to cover most of the use-cases and will meet the requirements of most of the deployments. Note though, that in some cases a different architecture or some modifications might be required. If in doubt - please contact Fortinet cloud team for assistance at gcptech (at) fortinet.com
 
-This part of the repository is use-case centric. It was created to help you match the configuration to the security functions you will use. Where possible use-cases are separated from the base FortiGate deployment. As different tools have different capabilities, this separation is implemented differently depending on the tool of your choice:
+This part of the repository is use-case centric. It was created to help you match the configuration to the security functions you will use. Where possible, the use-cases are separated from the base FortiGate deployment. As different tools have different capabilities, this separation is implemented differently depending on the tool of your choice:
 - *Terraform* - FortiOS provider allows creating, changing and destroying of FortiGate configuration "resources". You will find that all functionality is added after the deployment of the FortiGate instances as "Day 1" operations and can be changed/destroyed by applying a modified day1 configuration. This method provides maximum flexibility for Day n operations
 - *Deployment Manager* - although Deployment Manager supports adding custom APIs, it is not a commonly used feature. DM templates in this repo deploy all functionality as part of Day 0 bootstrapping. Updating the DM deployment will NOT result in any changes to the FortiGate configuration.
 - *gcloud* - deployment using Google Cloud CLI is provided as a large script. Parts of FortiGate configuration related to use-cases is added after the base deployment using SSH. Removing or changing of configuration is not part of the provided example script, but can be easily scripted by administrators.
@@ -19,10 +19,15 @@ This part of the repository is use-case centric. It was created to help you matc
 * [How to deploy](#how-to-deploy)
 
 ## Architecture
-The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up tp 3) load balancers to direct the traffic flows (a pattern known as "load balancer sandwich"):
+The recommended way to deploy FortiGates is a multi-AZ Active-Passive FGCP cluster with set of (up to 3) load balancers to direct the traffic flows (a pattern known as "load balancer sandwich"):
 ![FortiGate reference architecture overview](../../docs/img/fgt-ref-overview3.png)
 
-[Read more about the reference architecture design and best practices](base.md)
+While it is technically possible to use a single network interface to connect to both internal and external networks, it is recommended to use one external and one internal NIC for clarity of architecture and FortiGate configuration. Additional two NICs will be used for cluster heartbeat and management.
+
+It is recommended to place all the workloads in separate VPCs (possibly in separate projects) and use [VPC Peering](https://cloud.google.com/vpc/docs/vpc-peering) to maintain connectivity between FortiGate internal VPC and workload VPCs.
+
+[Read more about the HA cluster design in GCP](ha.md)
+[Creating a custom role and service account for FortiGates](../../docs/sdn_privileges.md)
 
 ## Supported use-cases
 ### Protecting public services (ingress N-S inspection)
