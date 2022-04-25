@@ -33,11 +33,12 @@ Following resources will be created:
     1. edit main.tf to point to them in `subnets` argument of `fortigates` module AND
     1. comment reference to `sample_networks` module as well as explicit dependency to it in `main.tf`
 1. Add your FortiGate license files (*.lic) to the day0 directory and update file names in `license_files` argument for `fortigate` module in `main.tf` file
+1. Edit `terraform.tfvars` to indicate your `GCP_PROJECT` and `GCE_REGION`
 1. Add your desired resource name prefix to `terraform.tfvars` as `prefix` variable (defaults to "fgt-")
-1. Use `./deploy.sh` to initialize and deploy the configuration to your default project and region or follow the usual terraform flow:
-    1. run `terraform init`
-    1. run `terraform plan -out day0.plan` and review the list of resources to be created
-    1. run `terraform apply day0.plan` to create resources
+1. make sure you are logged into GCP by running `gcloud auth list`
+1. run `terraform init`
+1. run `terraform plan -out day0.plan` and review the list of resources to be created
+1. run `terraform apply day0.plan` to create resources
 1. Proceed to [day1](../day1) for the next steps
 
 After everything is deployed you can connect to the management NIC of primary FortiGate using SSH or HTTPS (on standard ports) via the first IP address printed in `fgt-mgmt-eips`. Log in as **admin**, the initial password is set to primary instance id (for convenience visible as `default_password` output). You can verify the FortiGates are both up and running, licensed and clustered by running `get sys ha status` in FortiGate CLI.

@@ -34,12 +34,13 @@ module "fortigates" {
   ]
 
   # If creating sample VPC Networks in the same configuration - wait for them to be created!
+  # Remove this explicit dependency if using your own pre-existing networks.
   depends_on    = [
     module.sample_networks
   ]
 }
 
-## Uncomment below to create new networks
+## Remove the block below if you're using your own networks
 module "sample_networks" {
   source          = "../../../../modules-tf/utils/sample-networks"
 
