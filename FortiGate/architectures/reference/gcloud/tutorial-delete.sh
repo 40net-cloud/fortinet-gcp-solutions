@@ -1,10 +1,4 @@
-REGION=europe-west1
-ZONE1=europe-west1-b
-ZONE2=europe-west1-c
-
-REGION_LABEL=$(echo $REGION | tr -d '-' | sed 's/europe/eu/' | sed 's/australia/au/' | sed 's/northamerica/na/' | sed 's/southamerica/sa/' )
-ZONE1_LABEL=$REGION_LABEL-${ZONE1: -1}
-ZONE2_LABEL=$REGION_LABEL-${ZONE2: -1}
+source ./tutorial-vars.sh
 
 gcloud compute instances delete wrkld-tier2-web --zone=$ZONE1 -q
 gcloud compute instances delete wrkld-tier1-proxy --zone=$ZONE1 -q

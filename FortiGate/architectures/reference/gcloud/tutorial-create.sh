@@ -1,5 +1,5 @@
 ## This script deploys all the resources as described in the GCP Tutorial
-## Use it instead of manually copy-pasing command blocks from the tutorial article 
+## Use it instead of manually copy-pasing command blocks from the tutorial article
 
 ## naming scheme:
 # 1. component group name (eg. fgt, fgtilb, fgtelb, wrkld, untrust, trust)
@@ -14,26 +14,30 @@ cat <<EOT
 # I. VPCs and subnets
 # --------------------
 EOT
+## For ease of use all the variables (region, zones, CIDRs) are moved to a separate
+## file shared by create, delete and test scripts
+source ./tutorial-vars.sh
+
 ## Define CIDR ranges for all networks created in this deployment and save into
 ## variables for convenience.
-CIDR_EXT=172.20.0.0/24          # untrusted network
-CIDR_INT=172.20.1.0/24          # trusted network
-CIDR_HASYNC=172.20.2.0/24       # FortiGate heartbeat network
-CIDR_MGMT=172.20.3.0/24         # FortiGate management network (note, this can be merged with heartbeat for firmware 7.0+)
-CIDR_WRKLD_TIER1=10.0.0.0/16    # sample workload frontend network
-CIDR_WRKLD_TIER2=10.1.0.0/16    # sample workload backend network
-WRKLD_PROXY_IP=10.0.0.5
-WRKLD_WEB_IP=10.1.0.5
+#CIDR_EXT=172.20.0.0/24          # untrusted network
+#CIDR_INT=172.20.1.0/24          # trusted network
+#CIDR_HASYNC=172.20.2.0/24       # FortiGate heartbeat network
+#CIDR_MGMT=172.20.3.0/24         # FortiGate management network (note, this can be merged with heartbeat for firmware 7.0+)
+#CIDR_WRKLD_TIER1=10.0.0.0/16    # sample workload frontend network
+#CIDR_WRKLD_TIER2=10.1.0.0/16    # sample workload backend network
+#WRKLD_PROXY_IP=10.0.0.5
+#WRKLD_WEB_IP=10.1.0.5
 
 ## Define region and zones for deployment and save into variables for convenience
-REGION=europe-west1
-ZONE1=europe-west1-b
-ZONE2=europe-west1-c
+#REGION=europe-west1
+#ZONE1=europe-west1-b
+#ZONE2=europe-west1-c
 ### Some resource names will be labeled with region or zone name. Let's use their
 ### shortened names:
-REGION_LABEL=$(echo $REGION | tr -d '-' | sed 's/europe/eu/' | sed 's/australia/au/' | sed 's/northamerica/na/' | sed 's/southamerica/sa/' )
-ZONE1_LABEL=$REGION_LABEL-${ZONE1: -1}
-ZONE2_LABEL=$REGION_LABEL-${ZONE2: -1}
+#REGION_LABEL=$(echo $REGION | tr -d '-' | sed 's/europe/eu/' | sed 's/australia/au/' | sed 's/northamerica/na/' | sed 's/southamerica/sa/' )
+#ZONE1_LABEL=$REGION_LABEL-${ZONE1: -1}
+#ZONE2_LABEL=$REGION_LABEL-${ZONE2: -1}
 
 ## Create FortiGate-connected VPC networks and subnets. Trusted VPC network will be
 ## restricted to a single region, other networks will be used globally.
@@ -463,6 +467,7 @@ next
 end"
 
 cat <<EOT
+
 ################################################################################
 #
 # V. Health checks
@@ -830,6 +835,9 @@ config firewall vip
         set extip $ELB_ADDRESS
         set mappedip $WRKLD_PROXY_IP
         set extintf port1
+        set portforward enable
+        set extport 80
+        set mappedport 8080
     next
 end
 
@@ -855,7 +863,7 @@ config firewall policy
         set srcaddr all
         set dstaddr elb-serv1-to-proxy-tcp80
         set schedule always
-        set service HTTP
+        set service ALL
         set utm-status enable
         set ssl-ssh-profile certificate-inspection
         set ips-sensor default
@@ -878,3 +886,10 @@ config firewall policy
     next
 end
 "
+
+cat <<EOT
+
+=======================================
+# Next step:
+# - run tutorial-test.sh to verify everything works
+EOT
