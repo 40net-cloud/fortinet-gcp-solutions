@@ -15,7 +15,7 @@ Deployment manager configs (YAML) can be deployed using the *gcloud* command lin
 1. Open Cloud Shell
 1. clone the git repository (it will also work if you download only a single yaml file and change the link in *imports* section to be an absolute URL of the file on GitHub)
 1. deploy using
-`gcloud deployment-manager deployments create my-fgt-poc --config ha-ap-lb-sandwich.yaml`
+`gcloud deployment-manager deployments create my-fgt-poc --config config-aa.yaml`
 
 ### See also:
 - [Getting started with Deployment Manager](../../../../howto-dm.md)
