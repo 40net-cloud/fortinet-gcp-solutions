@@ -95,31 +95,7 @@ locals {
   })
 
 }
-/*
-data "template_file" "configs" {
-  count                  = 2
 
-  template               = file("${path.module}/fgt-base-config.tpl")
-  vars = {
-    hostname             = "${var.prefix}vm${count.index+1}-${local.zones_short[count.index]}"
-    unicast_peer_ip      = google_compute_address.hasync_priv[(count.index + 1) % 2 ].address
-    unicast_peer_netmask = cidrnetmask(data.google_compute_subnetwork.subnets[2].ip_cidr_range)
-    ha_prio              = (count.index+1)%2
-    healthcheck_port     = var.healthcheck_port
-    api_key              = random_string.api_key.result
-    ext_ip               = google_compute_address.ext_priv[count.index].address
-    ext_gw               = data.google_compute_subnetwork.subnets[0].gateway_address
-    int_ip               = google_compute_address.int_priv[count.index].address
-    int_gw               = data.google_compute_subnetwork.subnets[1].gateway_address
-    int_cidr             = data.google_compute_subnetwork.subnets[0].ip_cidr_range
-    hasync_ip            = google_compute_address.hasync_priv[count.index].address
-    mgmt_ip              = google_compute_address.mgmt_priv[count.index].address
-    mgmt_gw              = data.google_compute_subnetwork.subnets[3].gateway_address
-    ilb_ip               = google_compute_address.ilb.address
-#    api_acl              = "aa"
-  }
-}
-*/
 resource "google_compute_instance" "fgt-vm" {
   count                  = 2
 
@@ -144,7 +120,6 @@ resource "google_compute_instance" "fgt-vm" {
   }
 
   metadata = {
-#    user-data            = data.template_file.configs[count.index].rendered
     user-data            = (count.index == 0 ? local.config_active : local.config_passive )
     license              = fileexists(var.license_files[count.index]) ? file(var.license_files[count.index]) : null
   }
