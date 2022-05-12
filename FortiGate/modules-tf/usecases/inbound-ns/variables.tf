@@ -12,6 +12,12 @@ variable targets {
   description = "List of target IP and port tuples for creating DNATs on FortiGate."
 }
 
+variable logtraffic {
+  type = string
+  default = "all"
+  description = "logtraffic value to relay to fortios_firewall_policy resource"
+}
+
 variable day0 {
   description = "Object containing all necessary data from day0 remote state. Common for all usecase modules."
 }

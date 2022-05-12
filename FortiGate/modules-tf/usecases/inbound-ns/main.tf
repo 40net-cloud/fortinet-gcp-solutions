@@ -128,6 +128,7 @@ resource "fortios_firewall_policy" "vip_allow" {
   schedule = "always"
   inspection_mode = "flow"
   status = "enable"
+  logtraffic = var.logtraffic
 
   srcintf {
     name = "port1"
