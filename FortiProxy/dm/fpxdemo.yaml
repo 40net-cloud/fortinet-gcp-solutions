@@ -1,0 +1,39 @@
+imports:
+- path: fpxv7.jinja
+- path: proxy1.lic
+
+resources:
+- name: FortiProxy
+  type: fpxv7.jinja
+  properties:
+    prefix: fpxdemo
+    zone: europe-west1-b
+    #licFile: proxy1.lic
+    dataSubnet: $(ref.fpxdemo-sb.selfLink)
+
+- name: fpxdemo-vpc
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+- name: fpxdemo-sb
+  type: compute.v1.subnetwork
+  properties:
+    region: europe-west1
+    network: $(ref.fpxdemo-vpc.selfLink)
+    ipCidrRange: 172.20.0.0/24
+- name: fpxdemo-fw
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.fpxdemo-vpc.selfLink)
+    targetTags:
+    - fpx
+    sourceRanges:
+    - 0.0.0.0/0
+    allowed:
+    - IPProtocol: TCP
+
+outputs:
+- name: Default Password
+  value: $(ref.FortiProxy.instanceId)
+- name: External Address
+  value: $(ref.FortiProxy.externalIP)

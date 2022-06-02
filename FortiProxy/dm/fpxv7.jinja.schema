@@ -1,0 +1,31 @@
+info:
+  title: Single FortiProxy v7
+  version: 0.9
+
+requires:
+- zone
+- dataSubnet
+
+properties:
+  prefix:
+    type: string
+    default: fpx
+    description: Prefix to be added in front of resource names
+  zone:
+    type: string
+    description: Availability zone name for master instance
+    metadata: gce-zone
+  instanceType:
+    type: string
+    description: Instance size to be used for FGT deployment
+    default: e2-standard-2
+  dataSubnet:
+    type: string
+    description: URL of subnet for 1-NIC deployment
+  serviceAccount:
+    type: string
+    description: Service account email
+    default: default
+  licFile:
+    type: string
+    description: FortiProxy BYOL license file

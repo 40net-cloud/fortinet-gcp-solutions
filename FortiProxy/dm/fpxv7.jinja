@@ -1,0 +1,60 @@
+{% set firmwareImage = "projects/fortigcp-project-001/global/images/fpxv7-lic" %}
+
+resources:
+- name: {{properties.prefix}}-addr
+  type: compute.v1.address
+  properties:
+    addressType: INTERNAL
+    subnetwork: {{ properties.dataSubnet }}
+    purpose: GCE_ENDPOINT
+    region: {{ properties.zone.split('-')[0]~'-'~properties.zone.split('-')[1]}}
+- name: {{properties.prefix}}-vm
+  type: compute.v1.instance
+  properties:
+    zone: {{properties.zone}}
+    machineType: zones/{{ properties.zone }}/machineTypes/{{ properties.instanceType }}
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        sourceImage: {{ firmwareImage }}
+        diskSizeGb: 10.0
+    networkInterfaces:
+    - subnetwork: {{ properties.dataSubnet }}
+      networkIP: $(ref.{{properties.prefix}}-addr.address)
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    canIpForward: No
+    serviceAccounts:
+    - email: {{ properties.serviceAccount }}
+      scopes:
+      - 'https://www.googleapis.com/auth/cloud.useraccounts.readonly'
+      - 'https://www.googleapis.com/auth/logging.write'
+      - 'https://www.googleapis.com/auth/monitoring.write'
+      - 'https://www.googleapis.com/auth/compute'
+    metadata:
+      items:
+      {%- if properties.licFile is defined %}
+      - key: license
+        value: |
+          {{ imports[properties.licFile] | indent(10) }}
+      {%- endif %}
+      - key: user-data
+        value: |
+          config system dns
+            set primary 169.254.169.254
+            unset secondary
+          end
+    tags:
+      items:
+      - fpx
+
+
+outputs:
+- name: instanceId
+  value: $(ref.{{properties.prefix}}-vm.id)
+- name: externalIP
+  value: $(ref.{{properties.prefix}}-vm.networkInterfaces[0].accessConfigs[0].natIP)
