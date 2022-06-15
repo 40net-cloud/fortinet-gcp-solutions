@@ -1,13 +1,13 @@
-{% set firmwareImage = "projects/fortigcp-project-001/global/images/fpxv7-lic" %}
-
 resources:
-- name: {{properties.prefix}}-addr
+{% for subnet in properties.subnets %}
+- name: {{properties.prefix}}-addr-port{{loop.index}}
   type: compute.v1.address
   properties:
     addressType: INTERNAL
-    subnetwork: {{ properties.dataSubnet }}
+    subnetwork: {{ subnet }}
     purpose: GCE_ENDPOINT
     region: {{ properties.zone.split('-')[0]~'-'~properties.zone.split('-')[1]}}
+{% endfor %}
 - name: {{properties.prefix}}-vm
   type: compute.v1.instance
   properties:
@@ -18,15 +18,21 @@ resources:
       type: PERSISTENT
       boot: true
       autoDelete: true
+      guestOsFeatures:
+      - type: MULTI_IP_SUBNET
       initializeParams:
-        sourceImage: {{ firmwareImage }}
+        sourceImage: {{ properties.firmwareImage }}
         diskSizeGb: 10.0
     networkInterfaces:
-    - subnetwork: {{ properties.dataSubnet }}
-      networkIP: $(ref.{{properties.prefix}}-addr.address)
+    {% for subnet in properties.subnets %}
+    - subnetwork: {{ subnet }}
+      networkIP: $(ref.{{properties.prefix}}-addr-port{{loop.index}}.address)
+      {% if loop.first %}
       accessConfigs:
       - name: External NAT
         type: ONE_TO_ONE_NAT
+      {% endif %}
+    {% endfor %}
     canIpForward: No
     serviceAccounts:
     - email: {{ properties.serviceAccount }}
@@ -37,6 +43,8 @@ resources:
       - 'https://www.googleapis.com/auth/compute'
     metadata:
       items:
+      - key: serial-port-enable
+        value: "true"
       {%- if properties.licFile is defined %}
       - key: license
         value: |

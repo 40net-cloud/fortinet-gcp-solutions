@@ -1,6 +1,6 @@
 imports:
 - path: fpxv7.jinja
-- path: proxy1.lic
+- path: lic1.lic
 
 resources:
 - name: FortiProxy
@@ -8,8 +8,9 @@ resources:
   properties:
     prefix: fpxdemo
     zone: europe-west1-b
-    #licFile: proxy1.lic
-    dataSubnet: $(ref.fpxdemo-sb.selfLink)
+    licFile: lic1.lic
+    subnets:
+    - $(ref.fpxdemo-sb.selfLink)
 
 - name: fpxdemo-vpc
   type: compute.v1.network

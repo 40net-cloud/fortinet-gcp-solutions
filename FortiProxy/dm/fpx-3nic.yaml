@@ -1,0 +1,79 @@
+imports:
+- path: fpxv7.jinja
+- path: lic1.lic
+- path: lic2.lic
+
+resources:
+- name: Primary
+  type: fpxv7.jinja
+  properties:
+    prefix: fpxdemo1
+    zone: europe-west1-b
+    licFile: lic1.lic
+    instanceType: e2-standard-4
+    subnets:
+    - $(ref.fpxdemo-sb.selfLink)
+    - $(ref.fpxdemo-sb2.selfLink)
+    - $(ref.fpxdemo-sb3.selfLink)
+- name: Secondary
+  type: fpxv7.jinja
+  properties:
+    prefix: fpxdemo2
+    zone: europe-west1-b
+    licFile: lic2.lic
+    instanceType: e2-standard-4
+    subnets:
+    - $(ref.fpxdemo-sb.selfLink)
+    - $(ref.fpxdemo-sb2.selfLink)
+    - $(ref.fpxdemo-sb3.selfLink)
+
+- name: fpxdemo-vpc
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+- name: fpxdemo-sb
+  type: compute.v1.subnetwork
+  properties:
+    region: europe-west1
+    network: $(ref.fpxdemo-vpc.selfLink)
+    ipCidrRange: 172.20.0.0/24
+- name: fpxdemo-fw
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.fpxdemo-vpc.selfLink)
+    targetTags:
+    - fpx
+    sourceRanges:
+    - 0.0.0.0/0
+    allowed:
+    - IPProtocol: TCP
+- name: fpxdemo-vpc2
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+- name: fpxdemo-sb2
+  type: compute.v1.subnetwork
+  properties:
+    region: europe-west1
+    network: $(ref.fpxdemo-vpc2.selfLink)
+    ipCidrRange: 172.20.1.0/24
+- name: fpxdemo-vpc3
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+- name: fpxdemo-sb3
+  type: compute.v1.subnetwork
+  properties:
+    region: europe-west1
+    network: $(ref.fpxdemo-vpc3.selfLink)
+    ipCidrRange: 172.20.2.0/24
+
+outputs:
+- name: Default Password1
+  value: $(ref.Primary.instanceId)
+- name: External Address1
+  value: $(ref.Primary.externalIP)
+- name: Default Password2
+  value: $(ref.Secondary.instanceId)
+- name: External Address2
+  value: $(ref.Secondary.externalIP)

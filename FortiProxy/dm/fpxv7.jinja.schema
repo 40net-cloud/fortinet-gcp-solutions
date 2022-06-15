@@ -4,7 +4,6 @@ info:
 
 requires:
 - zone
-- dataSubnet
 
 properties:
   prefix:
@@ -19,9 +18,19 @@ properties:
     type: string
     description: Instance size to be used for FGT deployment
     default: e2-standard-2
-  dataSubnet:
+  firmwareImage:
     type: string
-    description: URL of subnet for 1-NIC deployment
+    default: projects/fortigcp-project-001/global/images/fpxv7-lic
+    description: URL of image file to deploy
+  subnets:
+    type: array
+    minItems: 1
+    maxItems: 8
+    items:
+      type: string
+    default:
+    - default
+    description: List of subnet URLs for conecting ports
   serviceAccount:
     type: string
     description: Service account email
