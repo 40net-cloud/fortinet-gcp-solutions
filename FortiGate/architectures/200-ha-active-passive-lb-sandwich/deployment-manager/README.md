@@ -15,16 +15,15 @@ For more details refer to examples and the [schema file](../../../modules-dm/fgc
 ### Deployed Resources
 - 2 FortiGate VM instances with 4 NICs each
 - 2 VPC Networks: heartbeat and management (unless provided)
+- 2 unmanaged Instance Groups (one in each zone)
+- HTTP Health Check
 - External Load Balancer
     - External addresses
-    - Target pool
-    - Legacy HTTP Health Check
-    - 2 Forwarding Rules for each IP (UDP and TCP)
+    - Backend Service
+    - 1 Forwarding Rule for each external address
 - Internal Load Balancer
-    - 2 unmanaged Instance Groups (one in each zone)
     - Backend Service
     - Internal Forwarding Rule (using ephemeral internal IP)
-    - HTTP Health Check
     - route(s) via Forwarding Rule
 - Cloud NAT
 

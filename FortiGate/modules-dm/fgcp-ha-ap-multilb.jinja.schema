@@ -88,6 +88,9 @@ properties:
                 type: string
               description:
                 type: string
+              networkTier:
+                type: string
+                enum: [ "STANDARD", "PREMIUM" ]
         allowaccess:
           type: string
           description: This setting configures allowaccess option on FortiGates for this network interface. Default values are defined in nicPropMap in singlevm2.jinja.schema
