@@ -23,7 +23,7 @@ resources:
     instanceType: e2-standard-4 #optional. defaults to e2-standard-4
     license: #optional. default: payg
       type: byol
-    version: 7.0.2 #optional
+    version: 7.2.0 #optional
     serialPortEnable: false
     networks: #define ALL the connected networks here. By convention the order is External, Internal, Heartbeat, Management, additional
     - name: external
