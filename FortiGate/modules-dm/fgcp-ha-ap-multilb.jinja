@@ -228,7 +228,7 @@ resources:
 
 {% for network in properties.networks if "serviceIPs" in network %}
 - name: {{ prefix }}-{{ network.name | default( 'net'~loop.index ) }}-elb-bes
-  type: compute.beta.regionBackendService
+  type: compute.v1.regionBackendService
   properties:
     region: {{ region }}
     loadBalancingScheme: EXTERNAL
@@ -254,7 +254,7 @@ resources:
     networkTier: {{ serviceIP.networkTier }}
     {% endif %}
 - name: {{prefix}}-{{serviceIP.name}}-elb
-  type: compute.beta.forwardingRule
+  type: compute.v1.forwardingRule
   properties:
     region: {{region}}
     IPAddress: $(ref.{{ prefix }}-{{ serviceIP.name }}.selfLink)

@@ -1,5 +1,5 @@
 # Active-Passive HA FortiGate cluster in LB Sandwich
-This template deploys 2 FortiGate instances in an Active-Passive HA cluster between two load balancers ("load balancer sandwich" pattern). LB Sandwich design enables use of multiple public IPs and provides faster, configurable failover times when compared to SDN-connector based. Due to Google Cloud Load Balancer limitations only UDP and TCP traffic is supported. Also, mind that during failover event the existing connections will be terminated.
+This template deploys 2 FortiGate instances in an Active-Passive HA cluster between two load balancers ("load balancer sandwich" pattern). LB Sandwich design enables use of multiple public IPs and provides faster, configurable failover times when compared to SDN-connector based. External Network Load Balancer configuration in this template uses L3_DEFAULT protocol to support broad range or protocols (TCP, UDP, ESP, GRE, ICMP, and ICMPv6) and Connection Tracking to enable stateful failover of existing TCP sessions.
 
 HA multi-zone deployments provide 99.98% Compute Engine SLA vs. 99.5% for single instances. See [Google Compute Engine SLA](https://cloud.google.com/compute/sla) for details.
 
@@ -16,7 +16,7 @@ As cloud networks do not allow any network mechanisms below IP layer (e.g. gratu
 Read [here](../README.md#choosing-ha-architecture) more about differences between different HA designs in Google Cloud.
 
 ## Diagram
-As unicast FGCP clustering of FortiGate instances requires dedicated heartbeat and management NICs, 2 additional VPC Networks need to be created (or indicated in configuration file). This design features 4 separate VPCs for external, internal, heartbeat and management NICs. Both instances are deployed in separate zones indicated in **zones** property to enable GCP 99.99% SLA.
+As unicast FGCP clustering of FortiGate instances requires dedicated heartbeat and management NICs, 2 additional VPC Networks need to be created (or indicated in configuration file). This design features 4 separate VPCs for external, internal, heartbeat and management NICs. Both instances are deployed in separate zones indicated in **zones** property to enable GCP 99.99% SLA. Note that newer firmware versions (7.0+) support using the same NIC for heartbeat and management.
 
 Additional resources deployed include:
 - default route for the internal VPC Network pointing to the internal load balancer rule
@@ -28,23 +28,17 @@ Additional resources deployed include:
 ## Deployed Resources
 - 2 FortiGate VM instances with 4 NICs each
 - 2 VPC Networks: heartbeat and management (unless provided)
+- 2 unmanaged Instance Groups (one in each zone)
+- HTTP Health Check
 - External Load Balancer
     - External addresses
-    - Target pool
-    - Legacy HTTP Health Check
-    - 2 Forwarding Rules for each IP (UDP and TCP)
+    - Backend Service
+    - 1 Forwarding Rule for each external address
 - Internal Load Balancer
-    - 2 unmanaged Instance Groups (one in each zone)
     - Backend Service
     - Internal Forwarding Rule (using ephemeral internal IP)
-    - HTTP Health Check
     - route(s) via Forwarding Rule
 - Cloud NAT
-
-## Prerequisites and Requirements
-You MUST create the external and protected VPC networks and subnets before using this template. External and protected subnets MUST be in the same region where VMs are deployed.
-
-All VPC Networks already created before deployment and provided to the template using `networks.*.vpc` and `networks.*.subnet` properties, MUST have first 2 IP addresses available for FortiGate use. Addresses are assigned statically and it's the responsibility of administrator to make sure they do not overlap.
 
 ## How to deploy
 - [using Deployment Manager](deployment-manager/)
