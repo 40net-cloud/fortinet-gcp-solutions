@@ -1,5 +1,7 @@
 ## MULTI_IP_SUBNET scheme
 
+**NOTE: this article is outdated as MULTI_IP_SUBNET support was removed from gcloud and from terraform. As of today it's still available for deployment manager templates and direct API calls. MULTI_IP_SUBNET is now only supported when creating images.**
+
 MULTI_IP_SUBNET is a “guest OS feature” flag, which can be enabled when creating the VM using
 
 the command line:
