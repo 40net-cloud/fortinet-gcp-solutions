@@ -171,9 +171,10 @@ resources:
 {% endfor %}
 
 - name: {{ prefix }}-ilb-probe{{ properties.probePort }}
-  type: compute.v1.healthCheck
+  type: compute.v1.regionHealthCheck
   properties:
     type: HTTP
+    region: {{region}}
     httpHealthCheck:
       port: {{ properties.probePort }}
       checkIntervalSec: 4
@@ -196,6 +197,8 @@ resources:
     backends:
     - group: $(ref.{{ prefix }}-hagroup0.selfLink)
     - group: $(ref.{{ prefix }}-hagroup1.selfLink)
+    connectionTrackingPolicy:
+      connectionPersistenceOnUnhealthyBackends: NEVER_PERSIST
 - name: {{ prefix }}-{{ network.name | default( 'net'~loop.index )}}-ilb
   type: compute.v1.forwardingRule
   properties:
@@ -224,52 +227,46 @@ resources:
 {% endfor %}{# for each network #}
 
 {% for network in properties.networks if "serviceIPs" in network %}
+- name: {{ prefix }}-{{ network.name | default( 'net'~loop.index ) }}-elb-bes
+  type: compute.v1.regionBackendService
+  properties:
+    region: {{ region }}
+    loadBalancingScheme: EXTERNAL
+    protocol: UNSPECIFIED
+    healthChecks:
+    - $(ref.{{ prefix }}-ilb-probe{{ properties.probePort }}.selfLink)
+    backends:
+    - group: $(ref.{{ prefix }}-hagroup0.selfLink)
+    - group: $(ref.{{ prefix }}-hagroup1.selfLink)
+    connectionTrackingPolicy:
+      connectionPersistenceOnUnhealthyBackends: NEVER_PERSIST
+
 {# add ELB forwarding rules for each address in serviceIPs #}
   {% for serviceIP in network.serviceIPs %}
 - name: {{ prefix }}-{{ serviceIP.name }}
   type: compute.v1.address
   properties:
     region: {{ region }}
-    {% if "description" in additionalIP %}
+    {% if "description" in serviceIP %}
     description: {{ serviceIP.description }}
     {% endif %}
-    {% if "networkTier" in additionalIP %}
-    networkTier: {{ additionalIP.networkTier }}
+    {% if "networkTier" in serviceIP %}
+    networkTier: {{ serviceIP.networkTier }}
     {% endif %}
-
-    {% for protocol in ["UDP","TCP"] %}
-- name: {{ prefix }}-{{ serviceIP.name }}-elb-{{ protocol|lower }}
+- name: {{prefix}}-{{serviceIP.name}}-elb
   type: compute.v1.forwardingRule
   properties:
-    region: {{ region }}
+    region: {{region}}
     IPAddress: $(ref.{{ prefix }}-{{ serviceIP.name }}.selfLink)
-    IPProtocol: {{ protocol }}
-    portRange: 1-65535
-    target: $(ref.{{ prefix }}-elb-pool.selfLink)
+    IPProtocol: L3_DEFAULT
+    allPorts: true
     loadBalancingScheme: EXTERNAL
-    {% endfor %}
-  {% endfor %}
+    backendService: $(ref.{{prefix}}-{{ network.name | default( 'net'~loop.index ) }}-elb-bes.selfLink)
+    {% if "networkTier" in serviceIP %}
+    networkTier: {{ serviceIP.networkTier }}
+    {% endif %}
+  {% endfor %} {# for each serviceIP #}
 {% endfor %}
-
-{# additional ELB resources #}
-- name: {{ prefix }}-elb-probe{{ properties.probePort}}
-  type: compute.v1.httpHealthCheck
-  properties:
-    port: {{ properties.probePort }}
-    checkIntervalSec: 4
-    timeoutSec: 2
-    unhealthyThreshold: 2
-    healthyThreshold: 1
-- name: {{ prefix }}-elb-pool
-  type: compute.v1.targetPool
-  properties:
-    region: {{ region }}
-    healthChecks:
-    - $(ref.{{ prefix }}-elb-probe{{ properties.probePort }}.selfLink)
-    instances:
-    - $(ref.{{ prefix }}-fgt1.selfLink)
-    - $(ref.{{ prefix }}-fgt2.selfLink)
-    sessionAffinity: NONE
 
 {# Cloud NAT needed for outbound connections to FortiGuard #}
 - name: {{ prefix }}-cloudnat-router

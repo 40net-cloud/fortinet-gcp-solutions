@@ -60,10 +60,10 @@ Make sure you understand differences between them and choose your architecture p
 | Feature | with SDN Connector | in LB Sandwich |
 | --------|--------------------|----------------|
 | Failover time | 30-40 secs | ~10 secs |
-| Protocols supported | UDP, TCP, ICMP, ESP, AH, SCTP | UDP, TCP |
+| Protocols supported | UDP, TCP, ICMP, ESP, AH, SCTP | TCP, UDP, ESP, GRE, ICMP, ICMPv6 |
 | Max. external addresses | hundreds* (ver. 7.0.2+) / 1 (ver. 7.0.1 and earlier) | hundreds* |
 | Tag-based internal GCP routes| supported | supported |
-| Preserves connections during failover | yes | no |
+| Preserves connections during failover | yes | yes |
 | SDN Connector privileges | read-write | none |
 
 \* - subject to external forwarding rules quota per GCP project and set of forwarded protocols
