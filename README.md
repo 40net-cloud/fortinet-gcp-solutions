@@ -12,7 +12,7 @@ If you're looking for the previous version of this repository, please go to [v1 
 
 * [FortiGate tutorial for GCP](https://github.com/fortinet/fortigate-tutorial-gcp)
 * [Architectures for FortiGate](FortiGate/)
-    * [Active-Passive HA in LB Sandwich](FortiGate/architectures/200-ha-active-passive-lb-sandwich/): [Deployment Manager](FortiGate/architectures/200-ha-active-passive-lb-sandwich/deployment-manager), [Terraform - coming soon]()
+    * [Active-Passive HA in LB Sandwich](FortiGate/architectures/200-ha-active-passive-lb-sandwich/): [Deployment Manager](FortiGate/architectures/200-ha-active-passive-lb-sandwich/deployment-manager), [Terraform](https://github.com/40net-cloud/fortigate-gcp-ha-ap-lb-terraform)
     * [Peered Security Hub](FortiGate/architectures/300-peered-security-hub/): [Deployment Manager](FortiGate/architectures/300-peered-security-hub/deployment-manager), [Terraform - coming soon]()
 * Templates for FortiManager (coming soon)
 * Templates for FortiWeb (coming soon)
