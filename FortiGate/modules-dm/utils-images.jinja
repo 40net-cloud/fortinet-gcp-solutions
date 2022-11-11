@@ -1,8 +1,24 @@
   {% macro getFgtImage(version, licenseType) -%}
   {% set imageList = ({
+    '7.2.3': {
+      'byol': 'fortinet-fgt-723-20221110-001-w-license',
+      'payg': 'fortinet-fgtondemand-723-20221110-001-w-license'
+    },
+    '7.2.2': {
+      'byol': 'fortinet-fgt-722-20221004-001-w-license',
+      'payg': 'fortinet-fgtondemand-722-20221004-001-w-license'
+    },
+    '7.2.1': {
+      'byol': 'fortinet-fgt-721-20220804-001-w-license',
+      'payg': 'fortinet-fgtondemand-721-20220804-001-w-license'
+    },
     '7.2.0': {
       'byol': 'fortinet-fgt-720-20220622-001-w-license',
       'payg': 'fortinet-fgtondemand-720-20220622-001-w-license'
+    },
+    '7.0.8': {
+      'byol': 'fortinet-fgt-708-20221013-001-w-license',
+      'payg': 'fortinet-fgtondemand-708-20221013-001-w-license'
     },
     '7.0.6': {
       'byol': 'fortinet-fgt-706-20220622-001-w-license',

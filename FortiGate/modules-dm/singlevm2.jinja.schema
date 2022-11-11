@@ -43,7 +43,7 @@ properties:
   version:
     type: string
     description: Firmware version to deploy.
-    default: 7.0.6
+    default: 7.2.3
   logDiskSizeGb:
     type: number
     description: Size of the secondary disk for logging. Set to 0 to disable the log disk.
