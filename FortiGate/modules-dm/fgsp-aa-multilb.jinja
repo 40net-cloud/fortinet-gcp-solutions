@@ -160,10 +160,11 @@ resources:
       port: 80
 {% endfor %}
 
-- name: {{ prefix }}-ilb-probe{{ properties.probePort }}
-  type: compute.v1.healthCheck
+- name: {{ prefix }}-fgt-probe{{ properties.probePort }}
+  type: compute.v1.regionHealthCheck
   properties:
     type: HTTP
+    region: {{region}}
     httpHealthCheck:
       port: {{ properties.probePort }}
       checkIntervalSec: 5
@@ -184,7 +185,7 @@ resources:
     network: {{ network.vpcLink }}
     protocol: TCP
     healthChecks:
-    - $(ref.{{ prefix }}-ilb-probe{{ properties.probePort }}.selfLink)
+    - $(ref.{{ prefix }}-fgt-probe{{ properties.probePort }}.selfLink)
     backends:
     - group: $(ref.{{ prefix }}-hagroup0.selfLink)
     - group: $(ref.{{ prefix }}-hagroup1.selfLink)
@@ -219,6 +220,20 @@ resources:
 {% endfor %}{# for each network #}
 
 {% for network in properties.networks if network.public %}
+- name: {{ prefix }}-{{ network.name | default( 'net'~loop.index ) }}-elb-bes
+  type: compute.v1.regionBackendService
+  properties:
+    region: {{ region }}
+    loadBalancingScheme: EXTERNAL
+    protocol: UNSPECIFIED
+    healthChecks:
+    - $(ref.{{ prefix }}-fgt-probe{{ properties.probePort }}.selfLink)
+    backends:
+    - group: $(ref.{{ prefix }}-hagroup0.selfLink)
+    - group: $(ref.{{ prefix }}-hagroup1.selfLink)
+    connectionTrackingPolicy:
+      connectionPersistenceOnUnhealthyBackends: NEVER_PERSIST
+
 {# add ELB forwarding rules for each address in serviceIPs #}
   {% for serviceIP in network.serviceIPs %}
 - name: {{ prefix }}-{{ serviceIP.name }}
@@ -232,39 +247,21 @@ resources:
     networkTier: {{ additionalIP.networkTier }}
     {% endif %}
 
-    {% for protocol in ["UDP","TCP"] %}
-- name: {{ prefix }}-{{ serviceIP.name }}-elb-{{ protocol|lower }}
+- name: {{prefix}}-{{serviceIP.name}}-elb
   type: compute.v1.forwardingRule
   properties:
-    region: {{ region }}
+    region: {{region}}
     IPAddress: $(ref.{{ prefix }}-{{ serviceIP.name }}.selfLink)
-    IPProtocol: {{ protocol }}
-    portRange: 1-65535
-    target: $(ref.{{ prefix }}-elb-pool.selfLink)
+    IPProtocol: L3_DEFAULT
+    allPorts: true
     loadBalancingScheme: EXTERNAL
-    {% endfor %}
+    backendService: $(ref.{{prefix}}-{{ network.name | default( 'net'~loop.index ) }}-elb-bes.selfLink)
+    {% if "networkTier" in serviceIP %}
+    networkTier: {{ serviceIP.networkTier }}
+    {% endif %}
+
   {% endfor %}
 {% endfor %}
-
-{# additional ELB resources #}
-- name: {{ prefix }}-elb-probe{{ properties.probePort}}
-  type: compute.v1.httpHealthCheck
-  properties:
-    port: {{ properties.probePort }}
-    checkIntervalSec: 5
-    timeoutSec: 3
-    unhealthyThreshold: 2
-    healthyThreshold: 1
-- name: {{ prefix }}-elb-pool
-  type: compute.v1.targetPool
-  properties:
-    region: {{ region }}
-    healthChecks:
-    - $(ref.{{ prefix }}-elb-probe{{ properties.probePort }}.selfLink)
-    instances:
-    - $(ref.{{ prefix }}-fgt1.selfLink)
-    - $(ref.{{ prefix }}-fgt2.selfLink)
-    sessionAffinity: NONE
 
 {# TODO: dodaj nat na port1#}
 - name: {{ prefix }}-cloudnat-router
