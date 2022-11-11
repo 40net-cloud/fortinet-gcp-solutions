@@ -5,7 +5,7 @@ HA multi-zone deployments provide 99.98% Compute Engine SLA vs. 99.5% for single
 
 * Deployment Manager Template file: [modules/fgcp-ha-ap-elbilb.jinja](../modules/deployment-manager/fgcp-ha-ap-elbilb.jinja)
 * Deployment Manager Schema file: [modules/fgcp-ha-ap-elbilb.jinja.schema](../modules/deployment-manager/fgcp-ha-ap-elbilb.jinja.schema)
-* Terraform module: [modules/](../modules/)
+* Terraform module: [https://github.com/40net-cloud/fortigate-gcp-ha-ap-lb-terraform](https://github.com/40net-cloud/fortigate-gcp-ha-ap-lb-terraform)
 
 ## Overview
 FortiGate Clustering Protocol (FGCP) natively does not work in L3 overlay networks. For cloud deployments it must be configured to use unicast communication, which slightly limits its functionality (only Active-Passive between 2 peers is possible) and enforces use of dedicated management interface. In this template port3 is used as heartbeat and FGCP sync interface and port4 is used as dedicated management interface (versions 7.0.1 and later allow usng single NIC for heartbeat and management, btu it's not supported by the templates in this repo yet).
