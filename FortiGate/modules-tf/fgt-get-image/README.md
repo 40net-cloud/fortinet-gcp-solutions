@@ -8,9 +8,10 @@ This module helps you find the correct image based on the following search crite
 
 If multiple images are matching, the result will point to the latest one.
 
-### Output
+### Outputs
 
-If the image is found the output contains full metadata of the image.
+- self_link - URI of the image
+- image - object with all image attributes
 
 ### Note
 
