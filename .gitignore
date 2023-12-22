@@ -1,2 +1,6 @@
 .DS_Store
 secrets/*
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
+.terraform*
