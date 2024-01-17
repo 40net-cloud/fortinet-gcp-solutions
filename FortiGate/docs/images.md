@@ -14,6 +14,10 @@ will get you a list of image URLs for FortiGate PAYG, and
 
 will save the URL of the newest BYOL image into FGT_IMG variable.
 
+## Using terraform
+
+You can use [fgt-get-image](../modules-tf/fgt-get-image) module to find the image. Simply run `terraform plan` or `terraform apply` in the module directory and provide your desired firmware version number. Optionally change architecture and licensing using `-var arch=arm` and `-var lic=byol` command line options respectively.
+
 ## Using image family
 Starting from end of 2021 all newly published versions will support *image family* attribute. Using image family makes it easier to deploy the newest image of given product's major version, because you no longer need to list all available images to see what's available. Instead, you can simply say "deploy newest image of FortiGate 7.0". The image family name will consist of:
 
@@ -27,12 +31,20 @@ Image families available at the time of writing:
 * fortigate-70-byol
 * fortigate-70-payg
 * fortigate-70 (DO NOT USE)
+* fortigate-72-byol
+* fortigate-72-payg
+* fortigate-arm64-72-byol
+* fortigate-arm64-72-payg
+* fortigate-74-byol
+* fortigate-74-payg
+* fortigate-arm64-74-byol
+* fortigate-arm64-74-payg
 
 ### Using image family with gcloud
 ```
 gcloud compute instances create my-fortigate \
   --machine-type=e2-micro \
-  --image-family=fortigate-64-byol --image-project=fortigcp-project-001 \
+  --image-family=fortigate-74-byol --image-project=fortigcp-project-001 \
   --can-ip-forward \
   --network-interface="network=default"
 ```
@@ -41,7 +53,7 @@ gcloud compute instances create my-fortigate \
 ```
 data "google_compute_image" "fgt_image" {
   project = "fortigcp-project-001"
-  family  = "fortigate-64-byol"
+  family  = "fortigate-74-byol"
 }
 
 resource "google_compute_instance" "my_fortigate" {
