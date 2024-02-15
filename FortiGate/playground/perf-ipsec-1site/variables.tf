@@ -10,7 +10,7 @@ variable "region_cli" {
 
 variable "prefix" {
   type = string
-  default = "bm-k51776"
+  default = "fgt-vpn-perf"
 }
 
 variable "firmware" {
