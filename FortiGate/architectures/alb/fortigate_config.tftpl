@@ -1,0 +1,47 @@
+config sys interface
+    edit port1
+      append allowaccess probe-response
+    next
+  end
+  config firewall vip
+    edit "http-to-backend"
+      set mappedip "${backend_address}"
+      set extintf "port1"
+      set portforward enable
+      set extport 80
+      set mappedport 80
+    next
+  end
+  config firewall policy
+    edit 1
+        set name "http-to-backend-allow"
+        set srcintf "port1"
+        set dstintf "port2"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "http-to-backend"
+        set schedule "always"
+        set service "ALL"
+        set utm-status enable
+        set inspection-mode proxy
+        set ssl-ssh-profile "certificate-inspection"
+        set ips-sensor "default"
+        set waf-profile "default"
+        set logtraffic all
+        set nat enable
+    next
+    edit 2
+        set name "allow-out"
+        set srcintf "port2"
+        set dstintf "port1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+        set nat enable
+        set ippool enable
+        set poolname "nlb1"
+    next
+  end
