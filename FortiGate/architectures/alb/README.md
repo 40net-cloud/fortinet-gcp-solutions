@@ -26,7 +26,7 @@ This module has no prerequisites except for enabled Compute API. It will create 
 HTTP(S) load balancer performs both source and destination NATs, which means original client IP address will not be visible in IP layer and the destination will be set to FortiGate VM private IP address. The consequences of this NAT for the configuration are as follows:
 
 1. Even if ALB has multiple frontends, they are indistinguishable once the traffic reaches FortiGates. Therefore, FGT policy cannot be used to distribute traffic based on IP addresses.
-2. In case the traffic needs to be directed to multiple targets based on 
+2. In case the traffic needs to be directed to multiple targets based on HTTP parameters (hostname, URL path, etc) you should deploy an internal HTTP laod balancer between FortiGates and the workloads (or use FortiWeb instead).
 3. Connections MUST be SNATed on FortiGate to make sure the return packet flow will be sent through the FGT VMs. Without SNAT the return flow will be sent directly to ALB.
 
 This example code automatically configures firewall policies to forward traffic to a demo web server.
