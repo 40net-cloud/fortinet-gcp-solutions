@@ -29,6 +29,7 @@ Changing NIC properties of a stopped instance will allow you to assign a custom 
 3.	Open Network/Static Routes and configure the following entries:
 
     1.	to the local subnet CIDR via the first ip address in that subnet. You will be presented with a warning about Gateway IP not being reachable via the interface. Ignore the warning, but make sure you provide the proper interface in this entry so the FortiGate will send traffic through the correct NIC:
+    
     ![](img/fgt-static-route-warning.png)
 
     1.	If you are configuring port1 interface which is typically used for egress traffic to the Internet, metadata service and Google API, you also need to configure the default route using gateway settings as in previous step:
