@@ -1,0 +1,164 @@
+config sys interface
+    edit "underlay1"
+        set vdom "root"
+        set ip ${underlay_local1}/32
+        set allowaccess ping
+        set type loopback
+        set role wan
+    next
+    edit "underlay2"
+        set vdom "root"
+        set ip ${underlay_local2}/32
+        set allowaccess ping
+        set type loopback
+        set role wan
+    next
+    edit "bgp-on-lb"
+        set vdom "root"
+        set ip ${overlay_local}/32
+        set allowaccess ping
+        set type loopback
+        set role wan
+    next
+end
+
+config vpn ipsec phase1-interface
+    edit "tun1"
+        set interface "port1"
+        set ike-version 2
+        set local-gw ${underlay_local1}
+        set peertype any
+        set net-device disable
+        set exchange-interface-ip enable
+        set exchange-ip-addr4 ${overlay_local}
+        set proposal aes128-sha256 aes256-sha256 aes128gcm-prfsha256 aes256gcm-prfsha384 chacha20poly1305-prfsha256
+        set remote-gw ${underlay_remote1}
+        set psksecret ${vpn_secret}
+    next
+    edit "tun2"
+        set interface "port1"
+        set ike-version 2
+        set local-gw ${underlay_local2}
+        set peertype any
+        set net-device disable
+        set exchange-interface-ip enable
+        set exchange-ip-addr4 ${overlay_local}
+        set proposal aes128-sha256 aes256-sha256 aes128gcm-prfsha256 aes256gcm-prfsha384 chacha20poly1305-prfsha256
+        set remote-gw ${underlay_remote2}
+        set psksecret ${vpn_secret}
+    next
+end
+
+config vpn ipsec phase2-interface
+    edit "tun1"
+        set phase1name "tun1"
+        set proposal aes128-sha1 aes256-sha1 aes128-sha256 aes256-sha256 aes128gcm aes256gcm chacha20poly1305
+    next
+    edit "tun2"
+        set phase1name "tun2"
+        set proposal aes128-sha1 aes256-sha1 aes128-sha256 aes256-sha256 aes128gcm aes256gcm chacha20poly1305
+    next
+end
+
+config system sdwan
+    set status enable
+    config zone
+        edit "demo"
+        next
+    end
+    config members
+        edit 1
+            set interface "tun1"
+            set zone "demo"
+        next
+        edit 2
+            set interface "tun2"
+            set zone "demo"
+        next
+    end
+    config health-check
+        edit "bgp_ping"
+            set server ${overlay_remote}
+            set update-static-route disable
+            set source ${overlay_local}
+            set members 0
+        next
+    end 
+end
+
+config router static
+    edit 0
+        set dst ${local_subnet}
+        set gateway ${port2_gw}
+        set device "port2"
+    next 
+end
+
+
+config firewall policy
+    edit 1
+        set name "to-vpn"
+        set srcintf "port2"
+        set dstintf "demo"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set utm-status enable
+        set ssl-ssh-profile "certificate-inspection"
+        set av-profile "default"
+        set ips-sensor "default"
+        set logtraffic all
+    next
+    edit 2
+        set name "from-vpn"
+        set srcintf "demo"
+        set dstintf "port2"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set utm-status enable
+        set ssl-ssh-profile "certificate-inspection"
+        set av-profile "default"
+        set ips-sensor "default"
+        set logtraffic all
+        set comments " (Reverse of to-vpn)"
+    next
+    edit 3
+        set name "bgp"
+        set srcintf "demo"
+        set dstintf "bgp-on-lb"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "BGP" "ALL_ICMP"
+    next
+end
+
+config router bgp
+    set as 65100
+    set router-id ${overlay_local}
+    config neighbor
+        edit "${overlay_remote}"
+            set capability-graceful-restart enable
+            set ebgp-enforce-multihop enable
+            set soft-reconfiguration enable
+            set interface "bgp-on-lb"
+            set remote-as 65200
+            set update-source "bgp-on-lb"
+        next
+    end
+    config network
+        edit 1
+            set prefix ${local_subnet}
+        next
+    end
+end
+
+config sys ha
+  set route-ttl 60
+end
