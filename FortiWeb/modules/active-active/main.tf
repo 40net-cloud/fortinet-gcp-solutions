@@ -134,7 +134,7 @@ resource "google_compute_instance" "fwb" {
   metadata = {
     fortiweb_user_password = var.admin_password
     flex_token             = try(var.flex_tokens[count.index], null)
-    license                = try(var.license_files[count.index], null)
+    license                = try(fileexists(var.license_files[count.index]), false) ? file(var.license_files[count.index]) : null
     user-data = templatefile("${path.module}/fwb_config.tftpl", {
       hostname      = "${local.prefix}fwb${count.index + 1}"
       ha_prio       = count.index + 1
