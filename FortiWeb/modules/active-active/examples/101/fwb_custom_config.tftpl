@@ -1,0 +1,29 @@
+config router static
+  edit 0
+    set dst ${server_subnet}
+    set gateway ${port2_gw}
+    set device port2
+  next
+end
+
+config server-policy server-pool
+  edit "it-works-psc"
+    config  pserver-list
+      edit 1
+        set ip ${server_addr}
+      next
+    end
+  next
+end
+
+config server-policy policy
+  edit "demo"
+    set ssl enable
+    set vserver default
+    set service HTTP
+    set replacemsg Predefined
+    set server-pool it-works-psc
+    config  http-content-routing-list
+    end
+  next
+end

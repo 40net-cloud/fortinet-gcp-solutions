@@ -1,0 +1,41 @@
+config system global
+  set hostname ${hostname}
+  set admin-sport ${admin_sport}
+end
+
+config system ha
+    set mode active-active-high-volume
+    set group-name group1
+    set priority ${ha_prio}
+    set tunnel-local ${ha_local}
+    set tunnel-peer ${ha_peer}
+    set override enable
+end
+
+config server-policy vserver
+  edit "default"
+    config vip-list
+%{ if vip == "" }    
+      edit 0
+        set interface port1
+        set use-interface-ip enable
+      next
+%{ else }
+      edit 0
+        set vip ${vip_name}
+      next
+%{ endif }
+    end
+  next
+end
+
+%{ if vip_name != "" }
+config system vip
+  edit ${vip_name}
+    set vip ${vip}/32
+    set interface port1
+  next
+end
+%{ endif }
+
+${custom_config}
