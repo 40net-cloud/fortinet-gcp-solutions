@@ -1,3 +1,5 @@
+## NOTE: Deployment Manager templates in this repository are no longer maintained. Google and Fortinet recommend to use Terraform for automating deployments in Google Cloud
+
 .jinja and .jinja.schema files with templates
 
 - fgcp-ha-ap-sdn - template for deploying HA Active-Passive FGCP cluster with SDN Connector
