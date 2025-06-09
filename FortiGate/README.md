@@ -6,6 +6,8 @@ Hint: architectures are marked with "100", "200", "300" to indicate their level 
 
 ## Common Architectures
 
+For a general description of the reference FortiGate architecture in Google Cloud please check [this article in Google Cloud Architecture Center](https://cloud.google.com/architecture/partners/fortigate-architecture-in-cloud)
+
 ### [Active-Passive HA in Load Balancer Sandwich](architectures/200-ha-active-passive-lb-sandwich/)
 This design will deploy 2 FortiGate VMs in 2 zones, preconfigure an Active/Passive cluster using unicast FGCP HA protocol, and place them between a pair of external and internal load balancers. On failover load balancers will detect failure of the primary instance using active probes on port 8008 and will switch traffic to the secondary instance. The failover time is noticeably faster than using Fabric Connector and is configurable in Health Check settings. This design supports multiple public IPs.
 This design is subject to 99.98% GCP Compute SLA.
@@ -69,5 +71,5 @@ Make sure you understand differences between them and choose your architecture p
 \* - subject to external forwarding rules quota per GCP project and set of forwarded protocols
 
 ## How to Deploy...
-- [...using Deployment Manager](../howto-dm.md)
+- [...using Deployment Manager](../howto-dm.md) - DEPRECATED
 - [...using Terraform](../howto-tf.md)
