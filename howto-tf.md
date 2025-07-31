@@ -38,7 +38,7 @@ In order to deploy terraform to GCP you must provide it the proper credentials. 
 1. using a service account key - this is the method to use when terraform deployment is automated and not triggered manually by a human
 
 ### Temporary access token
-The easiest way to deploy manually from a shell where Google Cloud SDN (gcloud) is installed is to use the same authentication method as gcloud itself.
+The easiest way to deploy manually from a shell where Google Cloud SDN CLI (gcloud) is installed is to use the same authentication method as gcloud itself.
 
 Start by making sure you are logged in:
 ```
@@ -49,8 +49,19 @@ and authorize Google Auth Library:
 gcloud auth application-default login
 ```
 You will be taken to a web page to authorize ADC.
-Afterwards Terraform will be able to automatically detect your login and act on your behalf.
+Afterwards Terraform will be able to **automatically detect** your login and act on your behalf.
 
+One more parameter needed for Google provider to work is the default project name. This can be either passed to provider using the `provider` block:
+```
+provider "google" {
+  projecy = "{{YOUR GCP PROJECT}}"
+}
+```
+or pulled from environment variable `GOOGLE_PROJECT`.
+
+If you're working in Google Cloud Shell the proper environment variable is set automatically to value from `gcloud config` (check the project name in prompt as indication what is currently set as your default project). That means terraform run from cloud shell does not require an explicit provider block in the code.
+
+#### Optional
 Alternatively, you can export your temporary auth-token:
 ```
 gcloud auth print-access-token
