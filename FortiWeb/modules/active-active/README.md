@@ -43,3 +43,5 @@ image = {
     license = "byol"
 }
 ```
+
+Adding license files or FortiFlex tokens to `var.license_files` or `var.flex_tokens` variables will automatically choose the BYOL base image.
