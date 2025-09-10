@@ -1,0 +1,61 @@
+resource "google_artifact_registry_repository" "docker" {
+    repository_id = "${var.prefix}-docker"
+    location = var.region
+    format = "DOCKER"
+}
+
+resource "google_storage_bucket" "app" {
+    name = "${var.prefix}-app-${random_string.suffix.result}"
+    location = var.region
+    force_destroy = true
+    uniform_bucket_level_access = true
+    storage_class = "REGIONAL"
+}
+
+locals {
+    app_files = ["Dockerfile", "index.js", "package.json"]
+}
+
+resource "google_storage_bucket_object" "app" {
+    for_each = toset(local.app_files)
+
+    name = each.value
+    source = "${path.module}/app/${each.value}"
+    bucket = google_storage_bucket.app.name
+}
+
+
+resource "google_cloudbuild_trigger" "infoapp" {
+    location = var.region
+
+    build {
+        step {
+            name = "gcr.io/cloud-builders/gsutil"
+            args = ["cp", "gs://${google_storage_bucket.app.name}/*", "."]
+        }
+        step {
+            name = "gcr.io/cloud-builders/docker"
+            args = [ "build", "-t", "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.docker.name}:latest", "."]
+        }
+  
+  }
+}
+
+
+/*
+data "google_artifact_registry_docker_image" "app" {
+  location      = google_artifact_registry_repository.docker.location
+  repository_id = google_artifact_registry_repository.docker.repository_id
+  image         = "my-image:my-tag"
+}
+
+resource "google_cloud_run_v2_service" "default" {
+ # ...
+
+  template {
+    containers {
+      image = data.google_artifact_registry_docker_image.app.self_link
+    }
+  }
+}
+*/

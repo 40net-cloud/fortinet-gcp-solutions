@@ -1,0 +1,38 @@
+<html>
+<head>
+  <title>Fortinet demo</title>
+<style>
+body {background-color: #eee; margin-left: 30px; height: 100%; overflow: hidden}
+div {position: absolute; padding: 0px; margin: 0px;}
+.redblock {width: 170px; height: 24px; background-color: #DA291C;}
+.inblock {width: 100%;height: 40px;position: relative;}
+.lgrey {background-color: #E6E6E6;}
+.teal40 {background-color: #2CCCD3;opacity: 0.4;}
+.main {width: 100%;top: 30%;font-family: Inter, Arial, sans-serif;}
+h1 {text-align: center;font-size: 80px;color: #222;text-shadow: 2px 2px #bbb;}
+#info {font-family: monospace; padding-left: 25%; white-space: pre;}
+</style>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script type="text/javascript">
+  $(document).ready(function() {
+    $('#info').load('/info');    
+});
+</script>
+</head>
+<body>
+  <div style="bottom: 15%"><img src="white.png" style="width: 200px;"><div class="inblock lgrey"></div></div>
+  <div class="redblock" style="left: 30px; top: 0px;"></div>
+  <div class="redblock" style="left: 74%; top: 15%;"></div>
+  <div style="left: 200px; top: 25%;"><img src="logo.png"></div>
+  <div style="left: 200px; top: 5%;"><img src="dots.png"></div>
+
+<div class="main">
+<h1>It works!
+<button onclick="location.href='eicar.com'">Try getting EICAR!</button></h1>
+<div id="info"></div>
+</div>
+
+  <div style="left: 80%; bottom: -2%"><img src="blue.png" style="width: 150px;"><div class="inblock teal40"></div><div class="inblock lgrey"></div></div>
+  <div style="right: 17%; bottom: 15%;"><img src="dots.png"></div>
+</body>
+</html>
