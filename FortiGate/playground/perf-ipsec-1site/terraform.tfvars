@@ -1,8 +1,12 @@
+prefix = "bm-51776"
 flex_serials = ["FGVMELTM23010640", "FGVMELTM23010641"]
-phase2_enc = "aes128gcm"
-machine_type = "n2-standard-8"
+phase2_enc = "aes256gcm"
+machine_type = "c2-standard-8"
 #nic_type = "GVNIC"
-firmware = "7.2.6"
+firmware = "7.4.3"
+tunnel_count = 4
+#region_dut = "europe-west1"
+#region_cli = "europe-west3"
 opt_queues = true
 opt_affinity = true
-opt_ipsec-soft-dec-async = true
+opt_ipsec-soft-dec-async = false
