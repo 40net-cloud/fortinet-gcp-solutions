@@ -51,11 +51,13 @@ To reliably obtain assigned MAC address:
 1. connect to FortiGate CLI
 2. issue the following command: `execute telnet 169.254.169.254 80`
 3. query the metadata server for the mac address using **PARENT_NIC_INDEX** (eg. **0** for **nic0**/**port1**) and **VLANID** to build the URL path:
+```
         GET /computeMetadata/v1/instance/vlan-network-interfaces/PARENT_NIC_INDEX/VLANID/mac HTTP/1.0
         Metadata-Flavor: Google
 
-
+```
 4. add the interface to FortiGate configuration. You can name your interface any way you want (eg. *new_nic*), the standard naming would be to use port and vlan id (eg. port1.200):
+```
         config sys interface
           edit new_nic
             set vdom root
@@ -66,7 +68,9 @@ To reliably obtain assigned MAC address:
             set ip IP_ADDRESS 255.255.255.255
           next
         end
+```
 5. remember to add any subnets to static routing as you would normally do
+```
         config router static
           edit 0
             set dst SUBNET_CIDR
@@ -74,7 +78,7 @@ To reliably obtain assigned MAC address:
             set device new_nic
           next
         end
-
+```
 
 ### References
 
