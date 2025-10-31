@@ -1,7 +1,7 @@
 config system interface
   edit port2
     set mode static
-    set ip ${port_addr}/32
+    set ip ${port2_addr}/32
     set secondary_ip enable
     config secondary_ip
       edit 0
@@ -57,4 +57,19 @@ config router static
     set dst 130.211.0.0/22
     set comment "GCP load balancer health checks"
   next
+end
+
+config fire policy
+    edit 0
+        set name "WARN-ALLOW-ALL"
+
+        set srcintf "port2"
+        set dstintf "port1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
 end

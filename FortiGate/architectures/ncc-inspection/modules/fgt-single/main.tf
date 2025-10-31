@@ -52,7 +52,7 @@ data "cloudinit_config" "fgt_bootstrap" {
       port2_gw   = var.subnet_ra.gateway_address
       port2_cidr = var.subnet_ra.ip_cidr_range
       port2_addr = var.address_ra
-      port2_ilb  = google_compute_forwarding_rule.ilb.address
+      port2_ilb  = google_compute_address.ilb.address
     })
   }
 

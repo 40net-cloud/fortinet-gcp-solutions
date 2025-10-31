@@ -28,6 +28,13 @@ resource "google_compute_region_backend_service" "ilb" {
   ]
 }
 
+resource "google_compute_address" "ilb" {
+  name         = "${local.prefix}ilb-addr"
+  region       = local.region
+  subnetwork   = var.subnet_ra.id
+  address_type = "INTERNAL"
+}
+
 resource "google_compute_forwarding_rule" "ilb" {
   name                  = "${local.prefix}ilb-fwdrule"
   region                = local.region
@@ -37,5 +44,6 @@ resource "google_compute_forwarding_rule" "ilb" {
   all_ports             = true
   load_balancing_scheme = "INTERNAL"
   backend_service       = google_compute_region_backend_service.ilb.id
+  ip_address            = google_compute_address.ilb.address
   allow_global_access   = true
 }
