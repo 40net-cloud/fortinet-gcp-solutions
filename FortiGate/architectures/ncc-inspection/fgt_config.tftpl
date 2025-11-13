@@ -1,0 +1,27 @@
+config router bgp
+  set as ${fgt_asn}
+  set ebgp-multipath enable
+  set graceful-restart enable
+  config neighbor
+  %{for peer in bgp_peers ~}
+    edit "${peer}"
+      set ebgp-enforce-multihop enable
+      set soft-reconfiguration enable
+      set remote-as ${ncc_asn}
+    next
+   %{endfor}
+  end
+end
+
+config fire policy
+    edit 0
+        set name "E-W-ALLOW-ALL"
+        set srcintf "port2"
+        set dstintf "port2"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+end

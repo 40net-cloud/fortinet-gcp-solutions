@@ -11,7 +11,7 @@ terraform {
 
 /*
 data "google_secret_manager_secret_version" "flex_user" {
-  secret = "bm-flex-user"
+  secret = var.flex
 }
 
 data "google_secret_manager_secret_version" "flex_pwd" {

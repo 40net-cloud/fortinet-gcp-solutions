@@ -11,7 +11,7 @@ variable "region" {
 
 variable "prefix" {
   type        = string
-  description = "(ooptional) Prefix added to names of all created resources"
+  description = "(optional) Prefix added to names of all created resources"
   default     = "fgt"
 }
 
@@ -19,6 +19,21 @@ variable "labels" {
   type        = map(string)
   description = "(optional) Labels to be added to resources"
   default     = {}
+}
+
+variable "spokes" {
+  type = map(object({
+    ip_cidr_range = string
+    region = optional(string)
+  }))
+  default = {
+    spoke1 = {
+      ip_cidr_range = "10.10.201.0/24"
+    },
+    spoke2 = {
+      ip_cidr_range = "10.10.202.0/24"
+    }
+  }
 }
 
 variable "fgt_asn" {

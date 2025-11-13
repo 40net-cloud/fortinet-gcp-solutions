@@ -9,16 +9,17 @@ The features and components used in this architecture are:
 - NCC Star topology
 - NCC RA (Router Appliance) Spoke
 - NCC Route exchange
-- FortiGate active-active (FGSP) cluster
-- FortiFlex licensing
+- FortiGate HA (active-passive) cluster
 
 *Mind that FortiGate architecture and licensing can be freely replaced with any other pattern.*
 
 ## Routing setup
 
-In this example FortiGate is peered using BGP with NCC mainly to automatically learn prefixes of all VPC spoke subnets. You can replace the RA spoke with set of static routes on FortiGate internal port (especially if your VPC edge spokes addfressing is well-organized and can be describe by super networks).
+In this example FortiGate is peered using BGP with NCC to automatically learn prefixes of all VPC spoke subnets. You can replace the RA spoke with set of static routes on FortiGate internal port (especially if your VPC edge spokes addressing is well-organized and can be described by super networks).
 
-Mind that dynamic routes advertised by FortiGate to NCC are distributed only to the members of center group. Therefore you need a different solution to route packets from edge spokes via FortiGate. You can achieve it by adding the following components:
-1. internal passthrough network load balancer in RA spoke network, with FortiGate instances as backends
+Custom static routes in NCC edge spokes. As the dynamic routes advertised by FortiGate to NCC RA spoke are distributed only to the members of center group, you need a different way to route packets from edge spokes via FortiGate. You can achieve it by adding the following components:
+1. internal passthrough network load balancer in RA spoke network, with FortiGate instances as backends (included as part of standard HA setup)
 2. custom static routes in each of edge spokes pointing to IP address of ILB from point 1
 3. additional center VPC spoke linked to FortiGate internal VPC (the same VPC would be connected twice to NCC hub: once as RA spoke and once as center VPC spoke)
+
+Mind that static routes in edge spoke VPCs are significantly different vs single route in hub VPC you would be using in peering-based architecture. The positive side is that routes in each individual edge spoke provide better granularity.
