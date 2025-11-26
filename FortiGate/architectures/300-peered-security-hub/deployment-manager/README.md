@@ -1,5 +1,11 @@
 # Deploying Peered Security Hub with Deployment Manager
 
+---
+
+## NOTE: Deployment Manager is deprecated and should be avoided. See [Google deprecation info](https://docs.cloud.google.com/deployment-manager/docs/deprecations) for more details.
+
+---
+
 *Note: Deployment Manager does not fully support creating VPC Peerings. It is possible only using actions, which are an unsupported feature and triggers warnings during deployment (it works though)*
 
 Creating peerings is a realtively simple task and can be automated using Deployment Manager actions. `peerings.jinja` template published in this directory loops through the provided list of spoke VPCs, deletes the built-in default route and creates peerings with the appropriate route export/import settings.

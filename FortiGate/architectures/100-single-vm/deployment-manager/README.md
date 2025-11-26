@@ -1,5 +1,11 @@
 # Deploying single FortiGate VM with Deployment Manager
 
+---
+
+## NOTE: Deployment Manager is deprecated and should be avoided. See [Google deprecation info](https://docs.cloud.google.com/deployment-manager/docs/deprecations) for more details.
+
+---
+
 ## Templates
 ### [singlevm-no-template.yaml](singlevm-no-template.yaml)
 

@@ -1,4 +1,11 @@
 # Deploying SDN Connector-based Active-Passive FortiGate cluster with Deployent Manager
+
+---
+
+## NOTE: Deployment Manager is deprecated and should be avoided. See [Google deprecation info](https://docs.cloud.google.com/deployment-manager/docs/deprecations) for more details.
+
+---
+
 This template deploys an Active-Passive HA cluster of 2 FortiGate instances together with the required cloud resources. The cluster is preconfigured with the FGCP configuration synchronization, GCP Fabric Connector, and proper HA configuration for external IP and route failover.
 
 HA multi-zone deployments provide 99.99% Compute Engine SLA vs. 99.5-99.9% for single instances. See [Google Compute Engine SLA](https://cloud.google.com/compute/sla) for details.

@@ -1,5 +1,12 @@
 # Deploying Active-Active group with Deployment Manager
 
+---
+
+## NOTE: Deployment Manager is deprecated and should be avoided. See [Google deprecation info](https://docs.cloud.google.com/deployment-manager/docs/deprecations) for more details.
+
+---
+
+
 fgsp-aa-multilb.jinja template currently supports only 2 active group members and 3 network interfaces (port3 reserved for FGSP communication).
 
 `config-aa.yaml` example file demonstrates how to deploy the solution consisting of:

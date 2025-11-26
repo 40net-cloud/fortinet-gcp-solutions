@@ -1,5 +1,11 @@
 # Deploying FortiGate A-P HA cluster in load balancer sandwich with Deployment Manager
 
+---
+
+## NOTE: Deployment Manager is deprecated and should be avoided. See [Google deprecation info](https://docs.cloud.google.com/deployment-manager/docs/deprecations) for more details.
+
+---
+
 ## Templates
 
 [fgcp-ha-ap-multilb.jinja](../../../modules-dm/fgcp-ha-ap-multilb.jinja) creates a cluster in load balancer sandwich with all required additional resources. I supports going beyond standard deployment and use more interfaces for a multi-nic E-W inspection (not a recommended architecture). Thanks to support for multiple ILBs, you can also deploy it between a VPC hosting GCP native connectivity services like Interconnect or Cloud VPN and your internal cloud network (see ha-ap-lb-sandwich-for-ic.yaml).
