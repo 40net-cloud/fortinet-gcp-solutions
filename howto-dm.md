@@ -1,4 +1,10 @@
-# Getting started with Deployment Manager
+# ~~Getting started with Deployment Manager~~
+
+---
+
+## NOTE: Deployment Manager is deprecated and should be avoided. See [Google deprecation info](https://docs.cloud.google.com/deployment-manager/docs/deprecations) for more details.
+
+---
 
 Deployment Manager templates are build around **configurations**. Configurations can be provided directly (as static YAML files) or generated (using jinja templates or python scripts). As configurations and templates can be nested, the most common deployments will consist of a **configuration** file calling one or more templates with some properties. As this repository makes use mainly of jinja templates, the 3 different file types found here are:
 - .yaml - static configuration files
