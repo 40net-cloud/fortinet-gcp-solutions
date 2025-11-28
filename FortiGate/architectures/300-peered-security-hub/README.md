@@ -10,6 +10,8 @@ Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC 
 
 Note that the Security Hub design focuses on the cloud architecture, while the Fortigate part is flexible - you can use any building block from single VM to autoscale cluster. The most common choice is FGCP A-P HA cluster with LB Sandwich.
 
+For more details on peering-based hub and spoke visit [Google Cloud Architecture Center](https://docs.cloud.google.com/architecture/deploy-hub-spoke-vpc-network-topology#peering)
+
 ## Private Service Connection
 Managed services (e.g. Cloud SQL) using Private Service Connection can be also configured as a spoke VPC. You need to enable route export on the hub peering, and you need to use custom routes with smaller destination than 0.0.0.0/0.
 
