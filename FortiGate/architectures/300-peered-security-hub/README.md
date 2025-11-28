@@ -8,7 +8,7 @@ Hub-and-spoke design puts firewalls in the hub VPC Network and connects all VPC 
 
 ![Peered Security Hub diagram](https://lucid.app/publicSegments/view/cdc1dc90-2ab4-4488-841a-92e2795ea630/image.png)
 
-Note that the Security Hub design focuses on the cloud architecture, while the Fortigate part is flexible - you can use any building block from single VM to FGCP A-P HA cluster with LB Sandwich.
+Note that the Security Hub design focuses on the cloud architecture, while the Fortigate part is flexible - you can use any building block from single VM to autoscale cluster. The most common choice is FGCP A-P HA cluster with LB Sandwich.
 
 ## Private Service Connection
 Managed services (e.g. Cloud SQL) using Private Service Connection can be also configured as a spoke VPC. You need to enable route export on the hub peering, and you need to use custom routes with smaller destination than 0.0.0.0/0.
@@ -18,7 +18,6 @@ See also: [Configuring private access](https://cloud.google.com/vpc/docs/configu
 ## How to Deploy
 You can turn any FortiGate deployment into a Peered Security Hub, but peering internal VPC Network with Spoke VPCs. Make sure you divide your resources properly into separate VPCs as only the traffic between separate Spoke VPCs will be inspected.
 
-- [using Deployment Manager](deployment-manager/)
 - [Terraform](terraform/)
 
 ### Manual deployment using gcloud
@@ -56,5 +55,4 @@ Peered Security Hub architecture requires FortiGates to be additionally configur
 Note that all spoke-to-spoke traffic will be arriving and leaving via port2, make sure your firewall policies are configured properly.
 
 ### Templates
-- [Deployment Manager](deployment-manager/)
 - [Terraform](terraform/)
