@@ -40,7 +40,7 @@ cd FortiGate/architectures/300-peered-security-hub/terraform
 2. make sure you're logged in using gcloud or add `provider "google"` and `provider "google-beta"` blocks with proper authentication configuration to the main.tf file
 3. if using gloud authentication and not deploying using Cloud Shell, add environment variable with project ID:
 ```
-export GOOGle_PROJECT=your-project-id
+export GOOGLE_PROJECT=your-project-id
 ```
 4. initialize terraform
 ```

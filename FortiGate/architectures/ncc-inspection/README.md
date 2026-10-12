@@ -1,8 +1,8 @@
 # Google Cloud NCC - inspection between VPC spokes
-## draft
-
 
 This is an example architecture which can be used for isnpecting traffic between NCC VPC Spokes. Traditional architecture based on peering is limited to 25 VPC peers and does not offer much flexibility on route filtering or transitiveness. NCC VPC Spokes are used by larger organizations seeking to go beyond the limitations of VPC Peering.
+
+Visit [Google Cloud Architecture Center](https://docs.cloud.google.com/architecture/deploy-hub-spoke-vpc-network-topology#ncc) for more details.
 
 The features and components used in this architecture are:
 - [NCC VPC Spokes](https://github.com/40net-cloud/fortinet-gcp-solutions/blob/d6a79c72ec05f344293d93a0493a3f9aaa639551/FortiGate/architectures/ncc-inspection/ncc-hub-n-spoke.tf#L72C1-L116C2)
@@ -23,3 +23,26 @@ Custom static routes in NCC edge spokes are needed to route traffic via FortiGat
 3. additional [center VPC spoke linked to FortiGate internal VPC](https://github.com/40net-cloud/fortinet-gcp-solutions/blob/d6a79c72ec05f344293d93a0493a3f9aaa639551/FortiGate/architectures/ncc-inspection/ncc-hub-n-spoke.tf#L62-L70) (the same VPC would be connected twice to NCC hub: once as RA spoke and once as center VPC spoke)
 
 Mind that static routes in edge spoke VPCs are significantly different vs single route in hub VPC you would be using in peering-based architecture. The positive side is that routes in each individual edge spoke provide better granularity.
+
+## How to deploy
+
+1. Copy the files from this directory or clone the repository and change your current directory to this one
+```
+git clone https://github.com/40net-cloud/fortinet-gcp-solutions.git
+cd FortiGate/architectures/ncc-inspection
+```
+2. Edit the `terraform.tfvars` file to match your needs. Change the prefix and labels so you can easily find the resources.
+3. Set current GCP project and initialize Terraform:
+```
+export GOOGLE_PROJECT=`gcloud config get project`
+terraform init
+```
+4. Deploy the template
+```
+terraform apply
+```
+
+To delete all resources once you're finished exploring simply run
+```
+terraform destroy
+```
